@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 type Video = {
   id: string;
   title: string;
@@ -8,8 +10,13 @@ type Video = {
 };
 
 export default function VideoCard({ video }: { video: Video }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="cursor-pointer">
+    <div
+      className="cursor-pointer"
+      onClick={() => navigate(`/watch/${video.id}`)}
+    >
       {/* Thumbnail */}
       <div className="relative w-full aspect-video bg-neutral-800 rounded-xl overflow-hidden">
         <img
