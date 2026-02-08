@@ -1,4 +1,6 @@
-import VideoCard from "../components/video/videocard";
+import { useEffect, useState } from "react";
+import VideoCard from "../components/video/VideoCard";
+import SkeletonCard from "../components/video/SkeletonCard";
 
 const mockVideos = Array.from({ length: 20 }).map((_, i) => ({
   id: String(i),
@@ -10,6 +12,13 @@ const mockVideos = Array.from({ length: 20 }).map((_, i) => ({
 }));
 
 export default function Home() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Home Feed</h1>
@@ -24,9 +33,13 @@ export default function Home() {
           xl:grid-cols-5
         "
       >
-        {mockVideos.map((video) => (
-          <VideoCard key={video.id} video={video} />
-        ))}
+        {loading
+          ? Array.from({ length: 10 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))
+          : mockVideos.map((video) => (
+              <VideoCard key={video.id} video={video} />
+            ))}
       </div>
     </div>
   );
