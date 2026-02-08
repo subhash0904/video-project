@@ -1,13 +1,22 @@
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AppLayout from "./components/layout/AppLayout";
+
+function Home() {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">Home Feed</h1>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex items-center justify-center">
-        <h1 className="text-3xl font-bold tracking-wide">
-          Video Platform 🚀
-        </h1>
-      </div>
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </AppLayout>
     </BrowserRouter>
   );
 }
