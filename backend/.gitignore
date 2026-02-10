@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma
+prisma/.env
+*.db
+*.db-journal
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary
+.tmp/
+temp/

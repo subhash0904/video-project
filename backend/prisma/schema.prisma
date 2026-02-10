@@ -1,0 +1,378 @@
+// Prisma Schema for Video Platform
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  username        String    @unique
+  passwordHash    String
+  displayName     String
+  avatarUrl       String?
+  
+  // Auth fields
+  emailVerified   Boolean   @default(false)
+  verificationToken String?
+  resetToken      String?
+  resetTokenExpiry  DateTime?
+  
+  // Preferences
+  language        String    @default("en")
+  theme           String    @default("dark")
+  restrictedMode  Boolean   @default(false)
+  
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  
+  // Relations
+  channel         Channel?
+  subscriptions   Subscription[]
+  watchHistory    WatchHistory[]
+  likes           Like[]
+  comments        Comment[]
+  analyticsEvents AnalyticsEvent[]
+  notifications   Notification[]
+  
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+// ============================================
+// CHANNEL
+// ============================================
+
+model Channel {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  
+  // Channel info
+  handle          String   @unique  // @username format
+  name            String
+  description     String?
+  bannerUrl       String?
+  avatarUrl       String?
+  
+  // Stats (denormalized for performance)
+  subscriberCount Int      @default(0)
+  videoCount      Int      @default(0)
+  totalViews      BigInt   @default(0)
+  
+  // Verification
+  verified        Boolean  @default(false)
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos          Video[]
+  subscribers     Subscription[]
+  
+  @@index([handle])
+  @@index([userId])
+  @@map("channels")
+}
+
+// ============================================
+// VIDEO
+// ============================================
+
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
+  DELETED
+}
+
+enum VideoType {
+  STANDARD
+  SHORT
+  LIVE
+}
+
+enum VideoCategory {
+  FILM_ANIMATION
+  AUTOS_VEHICLES
+  MUSIC
+  PETS_ANIMALS
+  SPORTS
+  TRAVEL_EVENTS
+  GAMING
+  PEOPLE_BLOGS
+  COMEDY
+  ENTERTAINMENT
+  NEWS_POLITICS
+  HOWTO_STYLE
+  EDUCATION
+  SCIENCE_TECH
+  NONPROFITS_ACTIVISM
+  KIDS
+  OTHER
+}
+
+model Video {
+  id              String      @id @default(uuid())
+  channelId       String
+  
+  // Video info
+  title           String
+  description     String?
+  thumbnailUrl    String
+  duration        Int         // seconds
+  type            VideoType   @default(STANDARD)
+  category        VideoCategory @default(OTHER)
+  status          VideoStatus @default(PROCESSING)
+  
+  // Streaming
+  hlsUrl          String?     // Master playlist URL
+  dashUrl         String?     // Future: DASH support
+  
+  // Metadata
+  uploadedAt      DateTime    @default(now())
+  publishedAt     DateTime?
+  processedAt     DateTime?
+  
+  // Stats (denormalized for performance)
+  views           BigInt      @default(0)
+  likes           Int         @default(0)
+  dislikes        Int         @default(0)
+  commentCount    Int         @default(0)
+  
+  // Privacy & monetization
+  isPublic        Boolean     @default(true)
+  allowComments   Boolean     @default(true)
+  ageRestricted   Boolean     @default(false)
+  
+  // Relations
+  channel         Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  qualities       VideoQuality[]
+  watchHistory    WatchHistory[]
+  userLikes       Like[]
+  comments        Comment[]
+  analyticsEvents AnalyticsEvent[]
+  
+  @@index([channelId])
+  @@index([status])
+  @@index([type])
+  @@index([category])
+  @@index([publishedAt])
+  @@index([views])
+  @@map("videos")
+}
+
+// ============================================
+// VIDEO QUALITY VARIANTS
+// ============================================
+
+model VideoQuality {
+  id          String   @id @default(uuid())
+  videoId     String
+  
+  quality     String   // 144p, 360p, 720p, 1080p, 2160p
+  resolution  String   // 256x144, 640x360, etc.
+  bitrate     Int      // kbps
+  fps         Int      @default(30)
+  codec       String   @default("h264")
+  
+  fileUrl     String   // HLS playlist for this quality
+  fileSize    BigInt   // bytes
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@unique([videoId, quality])
+  @@index([videoId])
+  @@map("video_qualities")
+}
+
+// ============================================
+// SUBSCRIPTION
+// ============================================
+
+model Subscription {
+  id              String   @id @default(uuid())
+  userId          String
+  channelId       String
+  
+  // Notification settings
+  notificationsOn Boolean  @default(true)
+  
+  subscribedAt    DateTime @default(now())
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel         Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, channelId])
+  @@index([userId])
+  @@index([channelId])
+  @@map("subscriptions")
+}
+
+// ============================================
+// WATCH HISTORY
+// ============================================
+
+model WatchHistory {
+  id              String   @id @default(uuid())
+  userId          String
+  videoId         String
+  
+  // Watch metrics
+  watchedAt       DateTime @default(now())
+  watchDuration   Int      // seconds watched
+  completed       Boolean  @default(false)
+  lastPosition    Int      @default(0) // seconds
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video           Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, videoId])
+  @@index([userId, watchedAt])
+  @@index([videoId])
+  @@map("watch_history")
+}
+
+// ============================================
+// LIKES
+// ============================================
+
+enum LikeType {
+  LIKE
+  DISLIKE
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  videoId   String
+  
+  type      LikeType
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
+  @@map("likes")
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model Comment {
+  id              String    @id @default(uuid())
+  userId          String
+  videoId         String
+  parentId        String?   // For replies
+  
+  content         String
+  
+  // Stats
+  likes           Int       @default(0)
+  
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  edited          Boolean   @default(false)
+  
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video           Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  parent          Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies         Comment[] @relation("CommentReplies")
+  
+  @@index([videoId, createdAt])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ============================================
+// ANALYTICS EVENTS
+// ============================================
+
+enum EventType {
+  VIDEO_VIEW
+  VIDEO_LIKE
+  VIDEO_DISLIKE
+  VIDEO_SHARE
+  CHANNEL_VIEW
+  SEARCH
+  VIDEO_QUALITY_CHANGE
+  PLAYBACK_ERROR
+}
+
+model AnalyticsEvent {
+  id          String    @id @default(uuid())
+  userId      String?   // Nullable for anonymous events
+  videoId     String?   // Nullable for non-video events
+  
+  eventType   EventType
+  metadata    Json?     // Flexible field for event-specific data
+  
+  // Context
+  sessionId   String?
+  userAgent   String?
+  ipAddress   String?
+  country     String?
+  device      String?
+  
+  timestamp   DateTime  @default(now())
+  
+  // Relations
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  video       Video?    @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@index([videoId, timestamp])
+  @@map("analytics_events")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id            String    @id @default(uuid())
+  userId        String
+  type          String    // NEW_VIDEO, COMMENT, COMMENT_REPLY, LIKE_MILESTONE, SUBSCRIBER, VIDEO_PROCESSED, SYSTEM
+  title         String
+  body          String
+  thumbnailUrl  String?
+  actionUrl     String?
+  metadata      Json?
+  read          Boolean   @default(false)
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, read, createdAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}

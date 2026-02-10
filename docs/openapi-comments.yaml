@@ -1,0 +1,134 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API - Comments
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4000/api
+security:
+  - BearerAuth: []
+paths:
+  /videos/{videoId}/comments:
+    get:
+      summary: Get comments for a video
+      operationId: getVideoComments
+      security: []
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [top, new] }
+      responses:
+        '200':
+          description: Comments
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/CommentFeedResponse' }
+              example:
+                success: true
+                data:
+                  - id: "cmt_1"
+                    userId: "u_123"
+                    content: "Great video!"
+                    likes: 12
+                    createdAt: "2026-02-08T12:00:00Z"
+                    parentId: null
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+    post:
+      summary: Post a comment
+      operationId: postVideoComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/CommentCreateRequest' }
+            example:
+              content: "Great video!"
+              parentId: null
+      responses:
+        '200':
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/CommentResponse' }
+              example:
+                success: true
+                data:
+                  id: "cmt_1"
+                  userId: "u_123"
+                  content: "Great video!"
+                  likes: 0
+                  createdAt: "2026-02-08T12:00:00Z"
+                  parentId: null
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /videos/{videoId}/comments/{commentId}/like:
+    post:
+      summary: Like a comment
+      operationId: likeComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /videos/{videoId}/comments/{commentId}:
+    delete:
+      summary: Delete a comment
+      operationId: deleteComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './openapi.yaml#/components/securitySchemes/BearerAuth'
+  schemas:
+    ApiResponse:
+      $ref: './openapi.yaml#/components/schemas/ApiResponse'
+    CommentResponse:
+      $ref: './openapi.yaml#/components/schemas/CommentResponse'
+    CommentFeedResponse:
+      $ref: './openapi.yaml#/components/schemas/CommentFeedResponse'
+    CommentCreateRequest:
+      $ref: './openapi.yaml#/components/schemas/CommentCreateRequest'

@@ -1,0 +1,1662 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API
+  version: 1.0.0
+  description: API contract aligned to backend routes. Comment like/delete routes now require videoId in the path (/videos/{videoId}/comments/{commentId}).
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.video-platform.dev/api
+  - url: http://localhost:4000/api
+tags:
+  - name: Auth
+    description: Authentication and user identity.
+  - name: Videos
+    description: Video content, uploads, and playback actions.
+  - name: Channels
+    description: Channel profiles and subscriptions.
+  - name: Comments
+    description: Video comments and replies.
+  - name: Users
+    description: User profiles and account management.
+  - name: Analytics
+    description: Engagement and analytics tracking.
+  - name: Recommendations
+    description: Personalized and feed recommendations.
+security:
+  - BearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+              username: "sarahjtech"
+              password: "SecurePass123!"
+              displayName: "Sarah Johnson"
+      responses:
+        '200':
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.access.token"
+                  refreshToken: "jwt.refresh.token"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+              password: "SecurePass123!"
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.access.token"
+                  refreshToken: "jwt.refresh.token"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh tokens
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+            example:
+              refreshToken: "jwt.refresh.token"
+      responses:
+        '200':
+          description: Refreshed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.new.access.token"
+                  refreshToken: "jwt.new.refresh.token"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset
+      operationId: requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+      responses:
+        '200':
+          description: Reset email sent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password reset email sent"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
+            example:
+              token: "reset.token"
+              password: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password reset successful"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/feed:
+    get:
+      tags: [Videos]
+      summary: Get video feed
+      operationId: getVideoFeed
+      security: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: type
+          schema: { type: string, enum: [STANDARD, SHORT] }
+      responses:
+        '200':
+          description: Feed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data:
+                  - id: "v_1"
+                    title: "Building a Video Platform"
+                    description: "Intro to HLS and transcoding."
+                    thumbnailUrl: "https://cdn.example/thumb.jpg"
+                    duration: 1245
+                    views: 156423
+                    likes: 8934
+                    type: "STANDARD"
+                    publishedAt: "2026-02-08T10:00:00Z"
+                    channel:
+                      id: "c_1"
+                      name: "Tech with Sarah"
+                      handle: "@sarahjtech"
+                      verified: true
+                      subscriberCount: 1500000
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 816
+                  totalPages: 41
+                  hasNextPage: true
+                  hasPrevPage: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /videos/search:
+    get:
+      tags: [Videos]
+      summary: Search videos
+      operationId: searchVideos
+      security: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+        - in: query
+          name: type
+          schema: { type: string, enum: [STANDARD, SHORT] }
+        - in: query
+          name: duration
+          schema: { type: string, enum: [short, medium, long] }
+        - in: query
+          name: uploadDate
+          schema: { type: string, enum: [hour, today, week, month, year] }
+        - in: query
+          name: sortBy
+          schema: { type: string, enum: [relevance, date, views, rating] }
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /videos/{id}:
+    get:
+      tags: [Videos]
+      summary: Get video by id
+      operationId: getVideoById
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Video
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoResponse' }
+              example:
+                success: true
+                data:
+                  id: "v_1"
+                  title: "Building a Video Platform"
+                  description: "Intro to HLS and transcoding."
+                  thumbnailUrl: "https://cdn.example/thumb.jpg"
+                  duration: 1245
+                  views: 156423
+                  likes: 8934
+                  type: "STANDARD"
+                  publishedAt: "2026-02-08T10:00:00Z"
+                  channel:
+                    id: "c_1"
+                    name: "Tech with Sarah"
+                    handle: "@sarahjtech"
+                    verified: true
+                    subscriberCount: 1500000
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Videos]
+      summary: Update video
+      operationId: updateVideo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VideoUpdateRequest' }
+            example:
+              title: "Updated title"
+              description: "Updated description"
+              isPublic: true
+              allowComments: true
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoResponse' }
+              example:
+                success: true
+                data:
+                  id: "v_1"
+                  title: "Updated title"
+                  description: "Updated description"
+                  thumbnailUrl: "https://cdn.example/thumb.jpg"
+                  duration: 1245
+                  views: 156423
+                  likes: 8934
+                  type: "STANDARD"
+                  publishedAt: "2026-02-08T10:00:00Z"
+                  channel:
+                    id: "c_1"
+                    name: "Tech with Sarah"
+                    handle: "@sarahjtech"
+                    verified: true
+                    subscriberCount: 1500000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Videos]
+      summary: Delete video
+      operationId: deleteVideo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Video deleted"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/recommended:
+    get:
+      tags: [Videos]
+      summary: Get recommended videos for a video
+      operationId: getRecommendedVideos
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 10
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/upload:
+    post:
+      tags: [Videos]
+      summary: Upload video
+      operationId: uploadVideo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                thumbnail:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                description:
+                  type: string
+                isPublic:
+                  type: boolean
+                allowComments:
+                  type: boolean
+              required: [video, title]
+      responses:
+        '200':
+          description: Uploaded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoResponse' }
+              example:
+                success: true
+                data:
+                  id: "v_new"
+                  title: "New upload"
+                  description: "First upload"
+                  thumbnailUrl: "https://cdn.example/thumb.jpg"
+                  duration: 0
+                  views: 0
+                  likes: 0
+                  type: "STANDARD"
+                  publishedAt: null
+                  channel:
+                    id: "c_1"
+                    name: "Tech with Sarah"
+                    handle: "@sarahjtech"
+                    verified: true
+                    subscriberCount: 1500000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/like:
+    post:
+      tags: [Videos]
+      summary: Like or dislike a video
+      operationId: toggleVideoLike
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VideoLikeRequest' }
+            example:
+              type: "LIKE"
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Like updated"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/like-status:
+    get:
+      tags: [Videos]
+      summary: Get like status
+      operationId: getVideoLikeStatus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LikeStatusResponse' }
+              example:
+                success: true
+                data:
+                  liked: true
+                  disliked: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/view:
+    post:
+      tags: [Videos]
+      summary: Increment view count
+      operationId: incrementViewCount
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /videos/{id}/watch:
+    post:
+      tags: [Videos]
+      summary: Record watch history
+      operationId: recordWatchHistory
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WatchRequest' }
+            example:
+              watchDuration: 312
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{id}/transcode-complete:
+    post:
+      tags: [Videos]
+      summary: Webhook for transcode completion
+      operationId: transcodeComplete
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TranscodeCompleteRequest' }
+            example:
+              status: "READY"
+              hlsPath: "/uploads/processed/v_1/master.m3u8"
+              thumbnailUrl: "https://cdn.example/thumb.jpg"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /videos/{videoId}/comments:
+    get:
+      tags: [Comments]
+      summary: Get comments for a video
+      operationId: getVideoComments
+      security: []
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [top, new] }
+      responses:
+        '200':
+          description: Comments
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentFeedResponse' }
+              example:
+                success: true
+                data:
+                  - id: "cmt_1"
+                    userId: "u_123"
+                    content: "Great video!"
+                    likes: 12
+                    createdAt: "2026-02-08T12:00:00Z"
+                    parentId: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Comments]
+      summary: Post a comment
+      operationId: postVideoComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommentCreateRequest' }
+            example:
+              content: "Great video!"
+              parentId: null
+      responses:
+        '200':
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentResponse' }
+              example:
+                success: true
+                data:
+                  id: "cmt_1"
+                  userId: "u_123"
+                  content: "Great video!"
+                  likes: 0
+                  createdAt: "2026-02-08T12:00:00Z"
+                  parentId: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{videoId}/comments/{commentId}/like:
+    post:
+      tags: [Comments]
+      summary: Like a comment
+      operationId: likeComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /videos/{videoId}/comments/{commentId}:
+    delete:
+      tags: [Comments]
+      summary: Delete a comment
+      operationId: deleteComment
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/videos:
+    get:
+      tags: [Channels]
+      summary: Get channel videos
+      operationId: getChannelVideos
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Videos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /channels/{id}:
+    get:
+      tags: [Channels]
+      summary: Get channel by handle or id
+      operationId: getChannel
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: Channel id or handle
+      responses:
+        '200':
+          description: Channel
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelResponse' }
+              example:
+                success: true
+                data:
+                  id: "c_1"
+                  name: "Tech with Sarah"
+                  handle: "@sarahjtech"
+                  verified: true
+                  subscriberCount: 1500000
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Channels]
+      summary: Update channel
+      operationId: updateChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChannelUpdateRequest' }
+            example:
+              description: "New channel description"
+              bannerUrl: "https://cdn.example/banner.jpg"
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelResponse' }
+              example:
+                success: true
+                data:
+                  id: "c_1"
+                  name: "Tech with Sarah"
+                  handle: "@sarahjtech"
+                  verified: true
+                  subscriberCount: 1500000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/analytics:
+    get:
+      tags: [Channels]
+      summary: Get channel analytics
+      operationId: getChannelAnalytics
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data:
+                  views: 156423
+                  watchTime: 12450
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/subscribe:
+    post:
+      tags: [Channels]
+      summary: Subscribe to channel
+      operationId: subscribeChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscribeRequest' }
+            example:
+              notificationsOn: true
+      responses:
+        '200':
+          description: Subscribed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Channels]
+      summary: Unsubscribe from channel
+      operationId: unsubscribeChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/subscription:
+    get:
+      tags: [Channels]
+      summary: Get subscription status
+      operationId: getChannelSubscription
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatusResponse' }
+              example:
+                success: true
+                data:
+                  isSubscribed: true
+                  notificationsOn: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{id}/notifications:
+    patch:
+      tags: [Channels]
+      summary: Update notification settings
+      operationId: updateChannelNotifications
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationsRequest' }
+            example:
+              notificationsOn: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get profile
+      operationId: getProfile
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Users]
+      summary: Update profile
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserUpdateRequest' }
+            example:
+              displayName: "Sarah J."
+              avatarUrl: "https://cdn.example/avatar.jpg"
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah J."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/profile/{id}:
+    get:
+      tags: [Users]
+      summary: Get profile by id
+      operationId: getProfileById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/change-password:
+    post:
+      tags: [Users]
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+            example:
+              currentPassword: "SecurePass123!"
+              newPassword: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password updated"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/watch-history:
+    get:
+      tags: [Users]
+      summary: Get watch history
+      operationId: getWatchHistory
+      responses:
+        '200':
+          description: History
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Users]
+      summary: Clear watch history
+      operationId: clearWatchHistory
+      responses:
+        '200':
+          description: Cleared
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/liked-videos:
+    get:
+      tags: [Users]
+      summary: Get liked videos
+      operationId: getLikedVideos
+      responses:
+        '200':
+          description: Liked videos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/subscriptions:
+    get:
+      tags: [Users]
+      summary: Get subscriptions
+      operationId: getSubscriptions
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/subscriptions/{channelId}:
+    post:
+      tags: [Users]
+      summary: Subscribe to channel
+      operationId: subscribeChannelForUser
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Subscribed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Users]
+      summary: Unsubscribe from channel
+      operationId: unsubscribeChannelForUser
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/subscriptions/{channelId}/status:
+    get:
+      tags: [Users]
+      summary: Check subscription status
+      operationId: checkSubscriptionStatus
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatusResponse' }
+              example:
+                success: true
+                data:
+                  isSubscribed: true
+                  notificationsOn: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /analytics/view:
+    post:
+      tags: [Analytics]
+      summary: Track view event
+      operationId: trackView
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsViewRequest' }
+            example:
+              videoId: "v_1"
+              watchTime: 30
+              device: "desktop"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /analytics/share:
+    post:
+      tags: [Analytics]
+      summary: Track share event
+      operationId: trackShare
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsShareRequest' }
+            example:
+              videoId: "v_1"
+              platform: "twitter"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /analytics/event:
+    post:
+      tags: [Analytics]
+      summary: Track custom event
+      operationId: trackEvent
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsEventRequest' }
+            example:
+              eventType: "VIDEO_QUALITY_CHANGE"
+              videoId: "v_1"
+              device: "desktop"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /analytics/trending:
+    get:
+      tags: [Analytics]
+      summary: Get trending videos
+      operationId: getTrendingVideos
+      security: []
+      responses:
+        '200':
+          description: Trending
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /analytics/like:
+    post:
+      tags: [Analytics]
+      summary: Track like event
+      operationId: trackLike
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnalyticsLikeRequest' }
+            example:
+              videoId: "v_1"
+              type: "LIKE"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /analytics/video/{videoId}:
+    get:
+      tags: [Analytics]
+      summary: Get video analytics
+      operationId: getVideoAnalytics
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data:
+                  views: 156423
+                  likes: 8934
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /recommendations/personalized:
+    get:
+      tags: [Recommendations]
+      summary: Get personalized recommendations
+      operationId: getPersonalizedRecommendations
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /recommendations/subscriptions:
+    get:
+      tags: [Recommendations]
+      summary: Get subscription feed
+      operationId: getSubscriptionFeed
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Feed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /recommendations/shorts:
+    get:
+      tags: [Recommendations]
+      summary: Get shorts feed
+      operationId: getShortsFeed
+      security: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Shorts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+          example:
+            success: false
+            message: "Invalid request"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+          example:
+            success: false
+            message: "Unauthorized"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }
+          example:
+            success: false
+            message: "Not found"
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+        hasNextPage: { type: boolean }
+        hasPrevPage: { type: boolean }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        username: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: string }
+    Channel:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        handle: { type: string }
+        avatarUrl: { type: string }
+        bannerUrl: { type: string }
+        description: { type: string }
+        verified: { type: boolean }
+        subscriberCount: { type: integer }
+    Video:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        thumbnailUrl: { type: string }
+        duration: { type: number }
+        views: { type: integer }
+        likes: { type: integer }
+        type: { type: string, enum: [STANDARD, SHORT] }
+        publishedAt: { type: string, format: date-time, nullable: true }
+        channel:
+          $ref: '#/components/schemas/Channel'
+    Comment:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        content: { type: string }
+        likes: { type: integer }
+        createdAt: { type: string, format: date-time }
+        parentId: { type: string, nullable: true }
+    RegisterRequest:
+      type: object
+      required: [email, username, password, displayName]
+      properties:
+        email: { type: string }
+        username: { type: string }
+        password: { type: string }
+        displayName: { type: string }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string }
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token: { type: string }
+        password: { type: string }
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user: { $ref: '#/components/schemas/User' }
+                accessToken: { type: string }
+                refreshToken: { type: string }
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/User' }
+    VideoResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Video' }
+    ChannelResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Channel' }
+    VideoFeedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/Video' }
+            meta: { $ref: '#/components/schemas/PaginationMeta' }
+    CommentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Comment' }
+    CommentFeedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/Comment' }
+    CommentCreateRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string }
+        parentId: { type: string, nullable: true }
+    LikeStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                liked: { type: boolean }
+                disliked: { type: boolean }
+    VideoUpdateRequest:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        isPublic: { type: boolean }
+        allowComments: { type: boolean }
+        thumbnailUrl: { type: string }
+    VideoLikeRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [LIKE, DISLIKE] }
+    WatchRequest:
+      type: object
+      required: [watchDuration]
+      properties:
+        watchDuration: { type: number }
+    TranscodeCompleteRequest:
+      type: object
+      properties:
+        status: { type: string }
+        hlsPath: { type: string }
+        thumbnailUrl: { type: string }
+    ChannelUpdateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        bannerUrl: { type: string }
+        avatarUrl: { type: string }
+    SubscribeRequest:
+      type: object
+      properties:
+        notificationsOn: { type: boolean }
+    SubscriptionStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                isSubscribed: { type: boolean }
+                notificationsOn: { type: boolean }
+    NotificationsRequest:
+      type: object
+      properties:
+        notificationsOn: { type: boolean }
+    UserUpdateRequest:
+      type: object
+      properties:
+        displayName: { type: string }
+        avatarUrl: { type: string }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+    AnalyticsViewRequest:
+      type: object
+      required: [videoId]
+      properties:
+        videoId: { type: string }
+        watchTime: { type: number }
+        device: { type: string }
+    AnalyticsShareRequest:
+      type: object
+      required: [videoId]
+      properties:
+        videoId: { type: string }
+        platform: { type: string }
+    AnalyticsEventRequest:
+      type: object
+      required: [eventType]
+      properties:
+        eventType: { type: string }
+        videoId: { type: string }
+        device: { type: string }
+        metadata: { type: object }
+    AnalyticsLikeRequest:
+      type: object
+      required: [videoId, type]
+      properties:
+        videoId: { type: string }
+        type: { type: string, enum: [LIKE, DISLIKE] }

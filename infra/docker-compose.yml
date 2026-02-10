@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: video-platform-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgress/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U video_user -d video_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: video-platform-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: video-platform-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres:5432/${POSTGRES_DB:-video_platform}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret-32chars}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-me-in-production-refresh-secret}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      UPLOAD_DIR: /app/uploads
+      HLS_OUTPUT_DIR: /app/streaming/hls
+    volumes:
+      - uploads_data:/app/uploads
+      - hls_data:/app/streaming/hls
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_STREAMING_BASE_URL: /hls
+    container_name: video-platform-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - hls_data:/app/streaming/hls:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  transcoder:
+    build:
+      context: ../streaming
+      dockerfile: Dockerfile
+    container_name: video-transcoder
+    restart: unless-stopped
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BACKEND_HOST: http://backend:4000
+      NODE_ENV: production
+    volumes:
+      - uploads_data:/app/uploads
+      - hls_data:/app/streaming/hls
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  hls_data:

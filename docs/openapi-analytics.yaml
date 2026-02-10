@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API - Analytics
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4000/api
+security:
+  - BearerAuth: []
+paths:
+  /analytics/view:
+    post:
+      summary: Track view event
+      operationId: trackView
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/AnalyticsViewRequest' }
+            example:
+              videoId: "v_1"
+              watchTime: 30
+              device: "desktop"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /analytics/share:
+    post:
+      summary: Track share event
+      operationId: trackShare
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/AnalyticsShareRequest' }
+            example:
+              videoId: "v_1"
+              platform: "twitter"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /analytics/event:
+    post:
+      summary: Track custom event
+      operationId: trackEvent
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/AnalyticsEventRequest' }
+            example:
+              eventType: "VIDEO_QUALITY_CHANGE"
+              videoId: "v_1"
+              device: "desktop"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /analytics/trending:
+    get:
+      summary: Get trending videos
+      operationId: getTrendingVideos
+      security: []
+      responses:
+        '200':
+          description: Trending
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /analytics/like:
+    post:
+      summary: Track like event
+      operationId: trackLike
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/AnalyticsLikeRequest' }
+            example:
+              videoId: "v_1"
+              type: "LIKE"
+      responses:
+        '200':
+          description: Tracked
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /analytics/video/{videoId}:
+    get:
+      summary: Get video analytics
+      operationId: getVideoAnalytics
+      parameters:
+        - in: path
+          name: videoId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data:
+                  views: 156423
+                  likes: 8934
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './openapi.yaml#/components/securitySchemes/BearerAuth'
+  schemas:
+    ApiResponse:
+      $ref: './openapi.yaml#/components/schemas/ApiResponse'
+    VideoFeedResponse:
+      $ref: './openapi.yaml#/components/schemas/VideoFeedResponse'
+    AnalyticsViewRequest:
+      $ref: './openapi.yaml#/components/schemas/AnalyticsViewRequest'
+    AnalyticsShareRequest:
+      $ref: './openapi.yaml#/components/schemas/AnalyticsShareRequest'
+    AnalyticsEventRequest:
+      $ref: './openapi.yaml#/components/schemas/AnalyticsEventRequest'
+    AnalyticsLikeRequest:
+      $ref: './openapi.yaml#/components/schemas/AnalyticsLikeRequest'

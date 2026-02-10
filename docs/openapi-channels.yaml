@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API - Channels
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4000/api
+security:
+  - BearerAuth: []
+paths:
+  /channels/{id}:
+    get:
+      summary: Get channel by handle or id
+      operationId: getChannel
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: Channel id or handle
+      responses:
+        '200':
+          description: Channel
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ChannelResponse' }
+              example:
+                success: true
+                data:
+                  id: "c_1"
+                  name: "Tech with Sarah"
+                  handle: "@sarahjtech"
+                  verified: true
+                  subscriberCount: 1500000
+        '404':
+          $ref: './openapi.yaml#/components/responses/NotFound'
+  /channels/{id}/videos:
+    get:
+      summary: Get channel videos
+      operationId: getChannelVideos
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Videos
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+    patch:
+      summary: Update channel
+      operationId: updateChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/ChannelUpdateRequest' }
+            example:
+              description: "New channel description"
+              bannerUrl: "https://cdn.example/banner.jpg"
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ChannelResponse' }
+              example:
+                success: true
+                data:
+                  id: "c_1"
+                  name: "Tech with Sarah"
+                  handle: "@sarahjtech"
+                  verified: true
+                  subscriberCount: 1500000
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /channels/{id}/analytics:
+    get:
+      summary: Get channel analytics
+      operationId: getChannelAnalytics
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data:
+                  views: 156423
+                  watchTime: 12450
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /channels/{id}/subscribe:
+    post:
+      summary: Subscribe to channel
+      operationId: subscribeChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/SubscribeRequest' }
+            example:
+              notificationsOn: true
+      responses:
+        '200':
+          description: Subscribed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+    delete:
+      summary: Unsubscribe from channel
+      operationId: unsubscribeChannel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /channels/{id}/subscription:
+    get:
+      summary: Get subscription status
+      operationId: getChannelSubscription
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/SubscriptionStatusResponse' }
+              example:
+                success: true
+                data:
+                  isSubscribed: true
+                  notificationsOn: false
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /channels/{id}/notifications:
+    patch:
+      summary: Update notification settings
+      operationId: updateChannelNotifications
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/NotificationsRequest' }
+            example:
+              notificationsOn: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './openapi.yaml#/components/securitySchemes/BearerAuth'
+  schemas:
+    ApiResponse:
+      $ref: './openapi.yaml#/components/schemas/ApiResponse'
+    ChannelResponse:
+      $ref: './openapi.yaml#/components/schemas/ChannelResponse'
+    VideoFeedResponse:
+      $ref: './openapi.yaml#/components/schemas/VideoFeedResponse'
+    ChannelUpdateRequest:
+      $ref: './openapi.yaml#/components/schemas/ChannelUpdateRequest'
+    SubscribeRequest:
+      $ref: './openapi.yaml#/components/schemas/SubscribeRequest'
+    SubscriptionStatusResponse:
+      $ref: './openapi.yaml#/components/schemas/SubscriptionStatusResponse'
+    NotificationsRequest:
+      $ref: './openapi.yaml#/components/schemas/NotificationsRequest'

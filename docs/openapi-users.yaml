@@ -1,0 +1,245 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API - Users
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4000/api
+security:
+  - BearerAuth: []
+paths:
+  /users/profile:
+    get:
+      summary: Get profile
+      operationId: getProfile
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+    patch:
+      summary: Update profile
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/UserUpdateRequest' }
+            example:
+              displayName: "Sarah J."
+              avatarUrl: "https://cdn.example/avatar.jpg"
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah J."
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/profile/{id}:
+    get:
+      summary: Get profile by id
+      operationId: getProfileById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '404':
+          $ref: './openapi.yaml#/components/responses/NotFound'
+  /users/change-password:
+    post:
+      summary: Change password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/ChangePasswordRequest' }
+            example:
+              currentPassword: "SecurePass123!"
+              newPassword: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password updated"
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/watch-history:
+    get:
+      summary: Get watch history
+      operationId: getWatchHistory
+      responses:
+        '200':
+          description: History
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data: []
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+    delete:
+      summary: Clear watch history
+      operationId: clearWatchHistory
+      responses:
+        '200':
+          description: Cleared
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/liked-videos:
+    get:
+      summary: Get liked videos
+      operationId: getLikedVideos
+      responses:
+        '200':
+          description: Liked videos
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/VideoFeedResponse' }
+              example:
+                success: true
+                data: []
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 0
+                  totalPages: 0
+                  hasNextPage: false
+                  hasPrevPage: false
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/subscriptions:
+    get:
+      summary: Get subscriptions
+      operationId: getSubscriptions
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                data: []
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/subscriptions/{channelId}:
+    post:
+      summary: Subscribe to channel
+      operationId: subscribeChannelForUser
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Subscribed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+    delete:
+      summary: Unsubscribe from channel
+      operationId: unsubscribeChannelForUser
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unsubscribed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+  /users/subscriptions/{channelId}/status:
+    get:
+      summary: Check subscription status
+      operationId: checkSubscriptionStatus
+      parameters:
+        - in: path
+          name: channelId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/SubscriptionStatusResponse' }
+              example:
+                success: true
+                data:
+                  isSubscribed: true
+                  notificationsOn: true
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './openapi.yaml#/components/securitySchemes/BearerAuth'
+  schemas:
+    ApiResponse:
+      $ref: './openapi.yaml#/components/schemas/ApiResponse'
+    UserResponse:
+      $ref: './openapi.yaml#/components/schemas/UserResponse'
+    UserUpdateRequest:
+      $ref: './openapi.yaml#/components/schemas/UserUpdateRequest'
+    ChangePasswordRequest:
+      $ref: './openapi.yaml#/components/schemas/ChangePasswordRequest'
+    VideoFeedResponse:
+      $ref: './openapi.yaml#/components/schemas/VideoFeedResponse'
+    SubscriptionStatusResponse:
+      $ref: './openapi.yaml#/components/schemas/SubscriptionStatusResponse'

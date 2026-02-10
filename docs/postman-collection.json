@@ -1,0 +1,560 @@
+{
+  "info": {
+    "name": "Video Platform API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api" },
+    { "key": "token", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "videoId", "value": "" },
+    { "key": "channelId", "value": "" },
+    { "key": "commentId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "handle", "value": "@sarahjtech" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sarah.johnson@techcreator.io\",\n  \"username\": \"sarahjtech\",\n  \"password\": \"SecurePass123!\",\n  \"displayName\": \"Sarah Johnson\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sarah.johnson@techcreator.io\",\n  \"password\": \"SecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sarah.johnson@techcreator.io\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset.token\",\n  \"password\": \"NewSecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Videos",
+      "item": [
+        {
+          "name": "Feed",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/videos/feed?limit=20&page=1"
+          }
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/videos/search?q=react&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Get Video",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/videos/{{videoId}}"
+          }
+        },
+        {
+          "name": "Update Video",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/videos/{{videoId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated title\",\n  \"description\": \"Updated description\",\n  \"isPublic\": true,\n  \"allowComments\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Video",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/videos/{{videoId}}"
+          }
+        },
+        {
+          "name": "Recommended",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/videos/{{videoId}}/recommended"
+          }
+        },
+        {
+          "name": "Upload Video",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/videos/upload",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "video", "type": "file", "src": "" },
+                { "key": "thumbnail", "type": "file", "src": "" },
+                { "key": "title", "type": "text", "value": "New upload" },
+                { "key": "description", "type": "text", "value": "First upload" },
+                { "key": "isPublic", "type": "text", "value": "true" },
+                { "key": "allowComments", "type": "text", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Like/Dislike",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/videos/{{videoId}}/like",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LIKE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Like Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/videos/{{videoId}}/like-status"
+          }
+        },
+        {
+          "name": "Increment View",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/videos/{{videoId}}/view"
+          }
+        },
+        {
+          "name": "Watch History",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/videos/{{videoId}}/watch",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"watchDuration\": 120\n}"
+            }
+          }
+        },
+        {
+          "name": "Transcode Complete",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/videos/{{videoId}}/transcode-complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"READY\",\n  \"hlsPath\": \"/uploads/processed/{{videoId}}/master.m3u8\",\n  \"thumbnailUrl\": \"https://cdn.example/thumb.jpg\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Channels",
+      "item": [
+        {
+          "name": "Get Channel",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/channels/{{handle}}"
+          }
+        },
+        {
+          "name": "Channel Videos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/channels/{{channelId}}/videos"
+          }
+        },
+        {
+          "name": "Update Channel",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/channels/{{channelId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"New channel description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Channel Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/channels/{{channelId}}/analytics"
+          }
+        },
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/channels/{{channelId}}/subscribe",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationsOn\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Unsubscribe",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/channels/{{channelId}}/subscribe"
+          }
+        },
+        {
+          "name": "Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/channels/{{channelId}}/subscription"
+          }
+        },
+        {
+          "name": "Update Notifications",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/channels/{{channelId}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationsOn\": true\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Get Comments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/videos/{{videoId}}/comments?sort=top"
+          }
+        },
+        {
+          "name": "Post Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/videos/{{videoId}}/comments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Great video!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Like Comment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/videos/{{videoId}}/comments/{{commentId}}/like"
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/videos/{{videoId}}/comments/{{commentId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/users/profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Sarah J.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Profile By Id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/profile/{{userId}}"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/users/change-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"SecurePass123!\",\n  \"newPassword\": \"NewSecurePass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Watch History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/watch-history"
+          }
+        },
+        {
+          "name": "Clear Watch History",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/watch-history"
+          }
+        },
+        {
+          "name": "Liked Videos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/liked-videos"
+          }
+        },
+        {
+          "name": "User Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/subscriptions"
+          }
+        },
+        {
+          "name": "Subscribe Channel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/subscriptions/{{channelId}}"
+          }
+        },
+        {
+          "name": "Unsubscribe Channel",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/subscriptions/{{channelId}}"
+          }
+        },
+        {
+          "name": "Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/subscriptions/{{channelId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Track View",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/analytics/view",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoId\": \"{{videoId}}\",\n  \"watchTime\": 30,\n  \"device\": \"desktop\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Track Share",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/analytics/share",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoId\": \"{{videoId}}\",\n  \"platform\": \"twitter\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Track Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/analytics/event",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"VIDEO_QUALITY_CHANGE\",\n  \"videoId\": \"{{videoId}}\",\n  \"device\": \"desktop\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Trending",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/trending"
+          }
+        },
+        {
+          "name": "Track Like",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/analytics/like",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoId\": \"{{videoId}}\",\n  \"type\": \"LIKE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Video Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/analytics/video/{{videoId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "Personalized",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/recommendations/personalized?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Subscriptions Feed",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/recommendations/subscriptions?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Shorts Feed",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/recommendations/shorts?page=1&limit=20"
+          }
+        }
+      ]
+    }
+  ]
+}

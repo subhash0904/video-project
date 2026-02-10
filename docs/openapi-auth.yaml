@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: Video Platform API - Auth
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: http://localhost:4000/api
+security:
+  - BearerAuth: []
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/RegisterRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+              username: "sarahjtech"
+              password: "SecurePass123!"
+              displayName: "Sarah Johnson"
+      responses:
+        '200':
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.access.token"
+                  refreshToken: "jwt.refresh.token"
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /auth/login:
+    post:
+      summary: Login
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/LoginRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+              password: "SecurePass123!"
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.access.token"
+                  refreshToken: "jwt.refresh.token"
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /auth/refresh:
+    post:
+      summary: Refresh tokens
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/RefreshRequest' }
+            example:
+              refreshToken: "jwt.refresh.token"
+      responses:
+        '200':
+          description: Refreshed
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/AuthResponse' }
+              example:
+                success: true
+                data:
+                  user:
+                    id: "u_123"
+                    email: "sarah.johnson@techcreator.io"
+                    username: "sarahjtech"
+                    displayName: "Sarah Johnson"
+                  accessToken: "jwt.new.access.token"
+                  refreshToken: "jwt.new.refresh.token"
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /auth/forgot-password:
+    post:
+      summary: Request password reset
+      operationId: requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/ForgotPasswordRequest' }
+            example:
+              email: "sarah.johnson@techcreator.io"
+      responses:
+        '200':
+          description: Reset email sent
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password reset email sent"
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /auth/reset-password:
+    post:
+      summary: Reset password
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: './openapi.yaml#/components/schemas/ResetPasswordRequest' }
+            example:
+              token: "reset.token"
+              password: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/ApiResponse' }
+              example:
+                success: true
+                message: "Password reset successful"
+        '400':
+          $ref: './openapi.yaml#/components/responses/BadRequest'
+  /auth/me:
+    get:
+      summary: Get current user
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: './openapi.yaml#/components/schemas/UserResponse' }
+              example:
+                success: true
+                data:
+                  id: "u_123"
+                  email: "sarah.johnson@techcreator.io"
+                  username: "sarahjtech"
+                  displayName: "Sarah Johnson"
+        '401':
+          $ref: './openapi.yaml#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './openapi.yaml#/components/securitySchemes/BearerAuth'
+  schemas:
+    ApiResponse:
+      $ref: './openapi.yaml#/components/schemas/ApiResponse'
+    RegisterRequest:
+      $ref: './openapi.yaml#/components/schemas/RegisterRequest'
+    LoginRequest:
+      $ref: './openapi.yaml#/components/schemas/LoginRequest'
+    RefreshRequest:
+      $ref: './openapi.yaml#/components/schemas/RefreshRequest'
+    ForgotPasswordRequest:
+      $ref: './openapi.yaml#/components/schemas/ForgotPasswordRequest'
+    ResetPasswordRequest:
+      $ref: './openapi.yaml#/components/schemas/ResetPasswordRequest'
+    AuthResponse:
+      $ref: './openapi.yaml#/components/schemas/AuthResponse'
+    UserResponse:
+      $ref: './openapi.yaml#/components/schemas/UserResponse'
