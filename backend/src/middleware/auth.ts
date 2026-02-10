@@ -14,10 +14,7 @@ export interface JwtPayload {
 }
 
 export interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-  };
+  user?: Express.User;
 }
 
 // ============================================
@@ -47,10 +44,39 @@ export const authenticate = async (
       throw new AppError('Invalid or expired token', 401);
     }
 
-    // Check if user still exists
+    // Verify user exists and get full user data
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true },
+      select: { 
+        id: true, 
+        email: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        googleId: true,
+        twoFactorEnabled: true,
+        twoFactorSecret: true,
+        backupCodes: true,
+        createdAt: true,
+        updatedAt: true,
+        channel: {
+          select: {
+            id: true,
+            name: true,
+            handle: true,
+            avatarUrl: true,
+            bannerUrl: true,
+            description: true,
+            subscriberCount: true,
+            videoCount: true,
+            totalViews: true,
+            verified: true,
+            createdAt: true,
+            updatedAt: true,
+            userId: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -59,8 +85,19 @@ export const authenticate = async (
 
     // Attach user to request
     req.user = {
+      id: user.id,
       userId: user.id,
       email: user.email,
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      googleId: user.googleId,
+      twoFactorEnabled: user.twoFactorEnabled,
+      twoFactorSecret: user.twoFactorSecret,
+      backupCodes: user.backupCodes,
+      channel: user.channel,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
 
     next();
@@ -92,13 +129,53 @@ export const optionalAuth = async (
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, email: true },
+        select: { 
+          id: true, 
+          email: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+          googleId: true,
+          twoFactorEnabled: true,
+          twoFactorSecret: true,
+          backupCodes: true,
+          createdAt: true,
+          updatedAt: true,
+          channel: {
+            select: {
+              id: true,
+              name: true,
+              handle: true,
+              avatarUrl: true,
+              bannerUrl: true,
+              description: true,
+              subscriberCount: true,
+              videoCount: true,
+              totalViews: true,
+              verified: true,
+              createdAt: true,
+              updatedAt: true,
+              userId: true,
+            },
+          },
+        },
       });
 
       if (user) {
         req.user = {
+          id: user.id,
           userId: user.id,
           email: user.email,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          googleId: user.googleId,
+          twoFactorEnabled: user.twoFactorEnabled,
+          twoFactorSecret: user.twoFactorSecret,
+          backupCodes: user.backupCodes,
+          channel: user.channel,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         };
       }
     } catch (error) {

@@ -34,11 +34,12 @@ export const getPersonalizedRecommendations = async (
             title: true,
             thumbnailUrl: true,
             duration: true,
-            views: true,
-            likes: true,
+            viewsCache: true,
+            likesCache: true,
             type: true,
             category: true,
             publishedAt: true,
+            stats: { select: { viewCount: true, likeCount: true } },
             channel: {
               select: {
                 id: true,
@@ -103,14 +104,14 @@ async function getFallbackRecommendations(
           publishedAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
           },
-          views: { gte: 1000 },
+          viewsCache: { gte: 1000 },
         },
       ],
     },
     take: limit,
     skip,
     orderBy: [
-      { views: 'desc' },
+      { viewsCache: 'desc' },
       { publishedAt: 'desc' },
     ],
     select: {
@@ -118,11 +119,12 @@ async function getFallbackRecommendations(
       title: true,
       thumbnailUrl: true,
       duration: true,
-      views: true,
-      likes: true,
+      viewsCache: true,
+      likesCache: true,
       type: true,
       category: true,
       publishedAt: true,
+      stats: { select: { viewCount: true, likeCount: true } },
       channel: {
         select: {
           id: true,
@@ -178,11 +180,12 @@ export const getSubscriptionFeed = async (
         title: true,
         thumbnailUrl: true,
         duration: true,
-        views: true,
-        likes: true,
+        viewsCache: true,
+        likesCache: true,
         type: true,
         category: true,
         publishedAt: true,
+        stats: { select: { viewCount: true, likeCount: true } },
         channel: {
           select: {
             id: true,
@@ -243,7 +246,7 @@ export const getShortsFeed = async (
     take: limit,
     skip,
     orderBy: [
-      { views: 'desc' },
+      { viewsCache: 'desc' },
       { publishedAt: 'desc' },
     ],
     select: {
@@ -251,11 +254,12 @@ export const getShortsFeed = async (
       title: true,
       thumbnailUrl: true,
       duration: true,
-      views: true,
-      likes: true,
+      viewsCache: true,
+      likesCache: true,
       category: true,
       publishedAt: true,
       hlsUrl: true,
+      stats: { select: { viewCount: true, likeCount: true } },
       channel: {
         select: {
           id: true,

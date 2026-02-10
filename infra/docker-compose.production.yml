@@ -1,0 +1,404 @@
+# YouTube-Scale Platform - Multi-Region Docker Compose
+services:
+  # ============================================================================
+  # LOAD BALANCER (Entry Point)
+  # ============================================================================
+  nginx-lb:
+    image: nginx:alpine
+    container_name: load-balancer
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./load-balancer/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./load-balancer/conf.d:/etc/nginx/conf.d:ro
+      - hls_data:/app/streaming/hls:ro
+    depends_on:
+      - api-gateway
+
+  # ============================================================================
+  # API GATEWAY (Traffic Controller)
+  # ============================================================================
+  api-gateway:
+    build:
+      context: ../api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: always
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret-32chars}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REGION: ${REGION:-us-west}
+      # Service URLs
+      USER_SERVICE_URL: http://backend:4000
+      VIDEO_SERVICE_URL: http://backend:4000
+      RECOMMENDATION_SERVICE_URL: http://backend:4000
+      COMMENT_SERVICE_URL: http://backend:4000
+      LIKE_SERVICE_URL: http://backend:4000
+      SUBSCRIPTION_SERVICE_URL: http://backend:4000
+      ANALYTICS_SERVICE_URL: http://backend:4000
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      # Circuit breaker
+      CIRCUIT_BREAKER_TIMEOUT: 3000
+      CIRCUIT_BREAKER_ERROR_THRESHOLD: 50
+      CIRCUIT_BREAKER_RESET_TIMEOUT: 30000
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================================
+  # KAFKA (Event Streaming Platform)
+  # ============================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    restart: always
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================================================
+  # EVENT STREAMING SERVICE (Kafka Consumers)
+  # ============================================================================
+  event-streaming:
+    build:
+      context: ../event-streaming
+      dockerfile: Dockerfile
+    container_name: event-streaming
+    restart: always
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: video-platform-events
+      KAFKA_GROUP_ID: event-processors
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres:5432/${POSTGRES_DB:-video_platform}
+      BATCH_SIZE: 100
+      BATCH_TIMEOUT: 5000
+      COUNTER_FLUSH_INTERVAL: 30000
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: ["node", "dist/consumers/index.js"]
+
+  # ============================================================================
+  # REALTIME SERVICE (WebSocket)
+  # ============================================================================
+  realtime-service:
+    build:
+      context: ../realtime-service
+      dockerfile: Dockerfile
+    container_name: realtime-service
+    restart: always
+    ports:
+      - "4100:4100"
+    environment:
+      PORT: 4100
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret-32chars}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: realtime-service
+      KAFKA_GROUP_ID: realtime-consumers
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ============================================================================
+  # DATABASES
+  # ============================================================================
+  
+  # Primary Database (Writes)
+  postgres:
+    image: postgres:16-alpine
+    container_name: video-platform-db-primary
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_platform}
+      # Replication settings
+      POSTGRES_INITDB_ARGS: "-c wal_level=replica -c max_wal_senders=10"
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./postgress/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgress/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-video_user} -d ${POSTGRES_DB:-video_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Read Replica 1
+  postgres-replica-1:
+    image: postgres:16-alpine
+    container_name: video-platform-db-replica-1
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_platform}
+      PGDATA: /var/lib/postgresql/data/replica
+    volumes:
+      - postgres_replica_1_data:/var/lib/postgresql/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-video_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Read Replica 2
+  postgres-replica-2:
+    image: postgres:16-alpine
+    container_name: video-platform-db-replica-2
+    restart: always
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-video_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-video_password}
+      POSTGRES_DB: ${POSTGRES_DB:-video_platform}
+      PGDATA: /var/lib/postgresql/data/replica
+    volumes:
+      - postgres_replica_2_data:/var/lib/postgresql/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-video_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # REDIS (Caching & Session Store)
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: video-platform-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Sentinel (for HA)
+  redis-sentinel:
+    image: redis:7-alpine
+    container_name: redis-sentinel
+    restart: always
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    volumes:
+      - ./redis/sentinel.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis
+
+  # ============================================================================
+  # BACKEND SERVICE (Microservice)
+  # ============================================================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: video-platform-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres:5432/${POSTGRES_DB:-video_platform}
+      # Read replicas
+      DATABASE_URL_REPLICA_1: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres-replica-1:5432/${POSTGRES_DB:-video_platform}
+      DATABASE_URL_REPLICA_2: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres-replica-2:5432/${POSTGRES_DB:-video_platform}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Kafka
+      KAFKA_BROKERS: kafka:9092
+      # Auth
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret-32chars}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-me-in-production-refresh-secret}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-change-me-encryption-secret-min-32-chars}
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-your-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-your-google-client-secret}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/auth/google/callback}
+      # URLs
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      APP_NAME: ${APP_NAME:-Video Platform}
+      UPLOAD_DIR: /app/uploads
+      HLS_OUTPUT_DIR: /app/streaming/hls
+    volumes:
+      - uploads_data:/app/uploads
+      - hls_data:/app/streaming/hls
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ============================================================================
+  # FRONTEND (Static + Nginx)
+  # ============================================================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_STREAMING_BASE_URL: /hls
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:4100}
+    container_name: video-platform-frontend
+    restart: unless-stopped
+    volumes:
+      - hls_data:/app/streaming/hls:ro
+    depends_on:
+      - api-gateway
+
+  # ============================================================================
+  # TRANSCODER SERVICE (FFmpeg Worker)
+  # ============================================================================
+  transcoder:
+    build:
+      context: ../streaming
+      dockerfile: Dockerfile
+    container_name: video-transcoder
+    restart: unless-stopped
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:9092
+      INPUT_DIR: /app/uploads
+      OUTPUT_DIR: /app/streaming/hls
+    volumes:
+      - uploads_data:/app/uploads
+      - hls_data:/app/streaming/hls
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ============================================================================
+  # ML RECOMMENDATION SERVICE
+  # ============================================================================
+  ml-recommendation:
+    build:
+      context: ../ml/serving
+      dockerfile: Dockerfile
+    container_name: ml-recommendation
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: postgresql://${POSTGRES_USER:-video_user}:${POSTGRES_PASSWORD:-video_password}@postgres-replica-1:5432/${POSTGRES_DB:-video_platform}
+    depends_on:
+      postgres-replica-1:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  postgres_primary_data:
+    driver: local
+  postgres_replica_1_data:
+    driver: local
+  postgres_replica_2_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  hls_data:
+    driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  default:
+    name: video-platform-network
+    driver: bridge

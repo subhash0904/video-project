@@ -296,19 +296,24 @@ class NotificationService {
     try {
       const video = await prisma.video.findUnique({
         where: { id: data.videoId },
-        select: { likes: true, title: true, channel: { select: { userId: true } } },
+        select: { 
+          title: true, 
+          channel: { select: { userId: true } },
+          stats: { select: { likeCount: true } }
+        },
       });
-      if (!video) return;
+      if (!video || !video.stats) return;
 
+      const likes = Number(video.stats.likeCount);
       const milestones = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 1000000];
-      if (milestones.includes(video.likes)) {
+      if (milestones.includes(likes)) {
         await this.create({
           userId: video.channel.userId,
           type: 'LIKE_MILESTONE',
-          title: `🎉 ${video.likes.toLocaleString()} likes!`,
-          body: `"${video.title}" reached ${video.likes.toLocaleString()} likes`,
+          title: `🎉 ${likes.toLocaleString()} likes!`,
+          body: `"${video.title}" reached ${likes.toLocaleString()} likes`,
           actionUrl: `/watch?v=${data.videoId}`,
-          metadata: { videoId: data.videoId, likes: video.likes },
+          metadata: { videoId: data.videoId, likes },
         });
       }
     } catch (err) {

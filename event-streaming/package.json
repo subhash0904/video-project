@@ -1,0 +1,26 @@
+{
+  "name": "event-streaming-service",
+  "version": "1.0.0",
+  "description": "Event streaming service with Kafka for real-time events (likes, comments, views)",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "consumer": "node dist/consumers/index.js"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "ioredis": "^5.4.2",
+    "dotenv": "^16.4.7",
+    "winston": "^3.18.0",
+    "@prisma/client": "^6.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.12.7",
+    "typescript": "^5.7.3",
+    "tsx": "^4.20.1",
+    "prisma": "^6.5.0"
+  }
+}

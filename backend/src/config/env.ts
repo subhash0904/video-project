@@ -23,6 +23,15 @@ interface Config {
   refreshTokenSecret: string;
   refreshTokenExpiresIn: string;
 
+  // Two-Factor Authentication
+  encryptionSecret: string;
+  appName: string;
+
+  // OAuth - Google
+  googleClientId: string;
+  googleClientSecret: string;
+  googleCallbackUrl: string;
+
   // Email
   smtpHost: string;
   smtpPort: number;
@@ -70,6 +79,15 @@ const config: Config = {
   refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || '',
   refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
 
+  // Two-Factor Authentication
+  encryptionSecret: process.env.ENCRYPTION_SECRET || '',
+  appName: process.env.APP_NAME || 'Video Platform',
+
+  // OAuth - Google
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:4000/api/auth/google/callback',
+
   // Email
   smtpHost: process.env.SMTP_HOST || '',
   smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -98,7 +116,7 @@ const config: Config = {
 };
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'REFRESH_TOKEN_SECRET'];
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'ENCRYPTION_SECRET'];
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {

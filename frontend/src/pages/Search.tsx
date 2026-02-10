@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import VideoCard from "../components/video/VideoCard";
 import type { Video, ApiResponse } from "../types";
 import { videosApi } from "../lib/api";
@@ -7,10 +7,14 @@ import { VIDEO_CATEGORY_OPTIONS } from "../utils/categories";
 
 export default function Search() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const query = params.get("q");
   const [results, setResults] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSearchSupported, setVoiceSearchSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const [type, setType] = useState<"STANDARD" | "SHORT" | "">("");
   const [duration, setDuration] = useState<"short" | "medium" | "long" | "">("");
@@ -21,6 +25,58 @@ export default function Search() {
     "relevance" | "date" | "views" | "rating" | ""
   >("");
   const [category, setCategory] = useState<string>("");
+
+  // Initialize voice search
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setVoiceSearchSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        navigate(`/search?q=${encodeURIComponent(transcript)}`);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Voice search error:', event.error);
+        setError('Voice search failed. Please try again.');
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [navigate]);
+
+  const startVoiceSearch = () => {
+    if (recognitionRef.current && !isListening) {
+      setError("");
+      recognitionRef.current.start();
+    }
+  };
+
+  const stopVoiceSearch = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
+  };
 
   useEffect(() => {
     if (!query) {
@@ -56,9 +112,39 @@ export default function Search() {
 
   return (
     <div className="pt-2">
-      <h1 className="text-xl font-bold mb-4">
-        Search results for: <span className="text-neutral-500">{query}</span>
-      </h1>
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="text-xl font-bold">
+          {query ? (
+            <>
+              Search results for: <span className="text-neutral-500">{query}</span>
+            </>
+          ) : (
+            "Search Videos"
+          )}
+        </h1>
+        
+        {voiceSearchSupported && (
+          <button
+            onClick={isListening ? stopVoiceSearch : startVoiceSearch}
+            className={`p-2 rounded-full transition-all ${
+              isListening 
+                ? 'bg-red-600 text-white animate-pulse' 
+                : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+            }`}
+            title={isListening ? "Stop voice search" : "Start voice search"}
+          >
+            {isListening ? (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
         <select

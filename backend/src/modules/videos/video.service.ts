@@ -27,6 +27,7 @@ export const getVideoFeed = async (
   const whereClause: any = {
     status: 'READY',
     isPublic: true,
+    isDeleted: false,
     publishedAt: { not: null },
   };
 
@@ -45,7 +46,7 @@ export const getVideoFeed = async (
       skip,
       orderBy: [
         { publishedAt: 'desc' },
-        { views: 'desc' },
+        { viewsCache: 'desc' },
       ],
       select: {
         id: true,
@@ -53,11 +54,19 @@ export const getVideoFeed = async (
         description: true,
         thumbnailUrl: true,
         duration: true,
-        views: true,
-        likes: true,
+        viewsCache: true,
+        likesCache: true,
         type: true,
         category: true,
         publishedAt: true,
+        stats: {
+          select: {
+            viewCount: true,
+            likeCount: true,
+            dislikeCount: true,
+            commentCount: true,
+          },
+        },
         channel: {
           select: {
             id: true,
@@ -131,11 +140,19 @@ export const getVideoById = async (videoId: string, userId?: string) => {
     throw new AppError('Video not available', 404);
   }
 
-  // Increment view count (async, don't wait)
-  prisma.video
-    .update({
-      where: { id: videoId },
-      data: { views: { increment: 1 } },
+  // Increment view count via VideoStats (event-driven, Rule 6)
+  prisma.videoStats
+    .upsert({
+      where: { videoId },
+      update: { viewCount: { increment: 1 } },
+      create: { videoId, viewCount: 1 },
+    })
+    .then(() => {
+      // Also update cache column for sorting
+      return prisma.video.update({
+        where: { id: videoId },
+        data: { viewsCache: { increment: 1 } },
+      });
     })
     .catch((err: unknown) => console.error('Failed to increment view count:', err));
 
@@ -345,11 +362,12 @@ export const toggleLike = async (
         prisma.like.delete({
           where: { id: existingLike.id },
         }),
-        prisma.video.update({
-          where: { id: videoId },
-          data: {
-            [type === 'LIKE' ? 'likes' : 'dislikes']: { decrement: 1 },
+        prisma.videoStats.upsert({
+          where: { videoId },
+          update: {
+            [type === 'LIKE' ? 'likeCount' : 'dislikeCount']: { decrement: 1 },
           },
+          create: { videoId },
         }),
       ]);
 
@@ -362,12 +380,13 @@ export const toggleLike = async (
           where: { id: existingLike.id },
           data: { type },
         }),
-        prisma.video.update({
-          where: { id: videoId },
-          data: {
-            likes: { [type === 'LIKE' ? 'increment' : 'decrement']: 1 },
-            dislikes: { [type === 'DISLIKE' ? 'increment' : 'decrement']: 1 },
+        prisma.videoStats.upsert({
+          where: { videoId },
+          update: {
+            likeCount: { [type === 'LIKE' ? 'increment' : 'decrement']: 1 },
+            dislikeCount: { [type === 'DISLIKE' ? 'increment' : 'decrement']: 1 },
           },
+          create: { videoId },
         }),
       ]);
 
@@ -384,11 +403,12 @@ export const toggleLike = async (
           type,
         },
       }),
-      prisma.video.update({
-        where: { id: videoId },
-        data: {
-          [type === 'LIKE' ? 'likes' : 'dislikes']: { increment: 1 },
+      prisma.videoStats.upsert({
+        where: { videoId },
+        update: {
+          [type === 'LIKE' ? 'likeCount' : 'dislikeCount']: { increment: 1 },
         },
+        create: { videoId },
       }),
     ]);
 
@@ -489,9 +509,9 @@ export const searchVideos = async (
   // Determine sort order
   let orderBy: any = { publishedAt: 'desc' };
   if (filters?.sortBy === 'views') {
-    orderBy = { views: 'desc' };
+    orderBy = { viewsCache: 'desc' };
   } else if (filters?.sortBy === 'rating') {
-    orderBy = { likes: 'desc' };
+    orderBy = { likesCache: 'desc' };
   }
 
   const [videos, total] = await Promise.all([
@@ -506,11 +526,17 @@ export const searchVideos = async (
         description: true,
         thumbnailUrl: true,
         duration: true,
-        views: true,
-        likes: true,
+        viewsCache: true,
+        likesCache: true,
         type: true,
         category: true,
         publishedAt: true,
+        stats: {
+          select: {
+            viewCount: true,
+            likeCount: true,
+          },
+        },
         channel: {
           select: {
             id: true,
@@ -552,6 +578,7 @@ export const getRecommendedVideos = async (
       id: { not: videoId },
       status: 'READY',
       isPublic: true,
+      isDeleted: false,
       publishedAt: { not: null },
       OR: [
         { channelId: currentVideo.channelId },
@@ -561,7 +588,7 @@ export const getRecommendedVideos = async (
     },
     take: limit,
     orderBy: [
-      { views: 'desc' },
+      { viewsCache: 'desc' },
       { publishedAt: 'desc' },
     ],
     select: {
@@ -569,11 +596,17 @@ export const getRecommendedVideos = async (
       title: true,
       thumbnailUrl: true,
       duration: true,
-      views: true,
-      likes: true,
+      viewsCache: true,
+      likesCache: true,
       type: true,
       category: true,
       publishedAt: true,
+      stats: {
+        select: {
+          viewCount: true,
+          likeCount: true,
+        },
+      },
       channel: {
         select: {
           id: true,

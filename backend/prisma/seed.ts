@@ -90,7 +90,7 @@ async function seed() {
         name: channelData[i].name,
         description: channelData[i].desc,
         verified: channelData[i].verified,
-        subscriberCount: Math.floor(Math.random() * 500000) + 50000, // 50k-550k subscribers
+        subscriberCount: 0, // Will be updated after subscriptions are created
         avatarUrl: users[i].avatarUrl,
       },
     });
@@ -208,7 +208,7 @@ async function seed() {
         status: 'READY' as any,
         isPublic: true,
         publishedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // Last 30 days
-        views: Math.floor(Math.random() * 10000) + 100, // 100-10k views per video
+        views: 0, // Will be updated based on actual watch history
         likes: 0,
         dislikes: 0,
         commentCount: 0,
@@ -339,11 +339,35 @@ async function seed() {
     }
   }
 
+  // Update video view counts based on actual watch history
+  console.log('🔄 Updating video view counts...');
+  for (const video of createdVideos) {
+    const viewCount = await prisma.watchHistory.count({ where: { videoId: video.id } });
+    await prisma.video.update({
+      where: { id: video.id },
+      data: { views: viewCount },
+    });
+  }
+
+  // Update channel total views
+  for (const channel of channels) {
+    const videos = await prisma.video.findMany({
+      where: { channelId: channel.id },
+      select: { views: true },
+    });
+    const totalViews = videos.reduce((sum, v) => sum + BigInt(v.views), BigInt(0));
+    await prisma.channel.update({
+      where: { id: channel.id },
+      data: { totalViews },
+    });
+  }
+
   console.log('\n🎉 Seed data created successfully!');
   console.log(`✅ ${users.length} users created`);
   console.log(`✅ ${channels.length} channels created`);
   console.log(`✅ ${createdVideos.length} videos created`);
-  console.log('✅ Subscriptions, likes, comments, and watch history generated\n');
+  console.log('✅ Subscriptions, likes, comments, and watch history generated');
+  console.log('✅ All counters reflect actual data\n');
 }
 
 seed()

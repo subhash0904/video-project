@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import config from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import logger from './utils/logger.js';
+import passport from './config/passport.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,9 @@ app.use(
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Passport initialization
+app.use(passport.initialize());
 
 // Static file serving for HLS streams and thumbnails
 app.use('/hls', express.static(path.join(__dirname, '../../uploads/processed'), {

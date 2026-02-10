@@ -7,6 +7,7 @@ import videoEngagementRoutes from './video-engagement.routes.js';
 const router = Router();
 
 // Public routes (with optional auth)
+router.get('/categories', videoController.getCategories);
 router.get('/feed', optionalAuth, videoController.getVideoFeed);
 router.get('/search', optionalAuth, videoController.searchValidation, videoController.searchVideos);
 router.get('/:id', optionalAuth, videoController.getVideoById);

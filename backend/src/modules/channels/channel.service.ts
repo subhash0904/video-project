@@ -72,10 +72,11 @@ export const getChannelVideos = async (
         description: true,
         thumbnailUrl: true,
         duration: true,
-        views: true,
-        likes: true,
+        viewsCache: true,
+        likesCache: true,
         type: true,
         publishedAt: true,
+        stats: { select: { viewCount: true, likeCount: true } },
       },
     }),
     prisma.video.count({ where: whereClause }),
@@ -152,13 +153,13 @@ export const getChannelAnalytics = async (channelId: string, userId: string) => 
     recentVideos,
     topVideos,
   ] = await Promise.all([
-    prisma.video.aggregate({
-      where: { channelId },
-      _sum: { views: true },
+    prisma.videoStats.aggregate({
+      where: { video: { channelId } },
+      _sum: { viewCount: true },
     }),
-    prisma.video.aggregate({
-      where: { channelId },
-      _sum: { likes: true },
+    prisma.videoStats.aggregate({
+      where: { video: { channelId } },
+      _sum: { likeCount: true },
     }),
     prisma.video.findMany({
       where: { channelId },
@@ -167,28 +168,36 @@ export const getChannelAnalytics = async (channelId: string, userId: string) => 
       select: {
         id: true,
         title: true,
-        views: true,
-        likes: true,
         publishedAt: true,
+        stats: {
+          select: {
+            viewCount: true,
+            likeCount: true,
+          },
+        },
       },
     }),
     prisma.video.findMany({
       where: { channelId },
       take: 5,
-      orderBy: { views: 'desc' },
+      orderBy: { viewsCache: 'desc' },
       select: {
         id: true,
         title: true,
-        views: true,
-        likes: true,
         publishedAt: true,
+        stats: {
+          select: {
+            viewCount: true,
+            likeCount: true,
+          },
+        },
       },
     }),
   ]);
 
   return {
-    totalViews: totalViews._sum.views || 0,
-    totalLikes: totalLikes._sum.likes || 0,
+    totalViews: totalViews._sum.viewCount || 0,
+    totalLikes: totalLikes._sum.likeCount || 0,
     recentVideos,
     topVideos,
   };

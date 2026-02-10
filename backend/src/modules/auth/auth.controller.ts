@@ -4,6 +4,7 @@ import * as authService from './auth.service.js';
 import { successResponse, errorResponse } from '../../utils/response.js';
 import { asyncHandler } from '../../middleware/errorHandler.js';
 import { AuthRequest } from '../../middleware/auth.js';
+import { generateToken, generateRefreshToken, JwtPayload } from '../../middleware/auth.js';
 
 // ============================================
 // Validation Rules
@@ -125,4 +126,37 @@ export const resetPassword = asyncHandler(async (req, res: Response) => {
   const result = await authService.resetPassword(token, newPassword);
 
   return successResponse(res, result, 'Password reset successful');
+});
+
+// ============================================
+// Google OAuth Controllers
+// ============================================
+
+export const googleCallback = asyncHandler(async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    return errorResponse(res, 'Authentication failed', 401);
+  }
+
+  // Generate JWT tokens
+  const payload: JwtPayload = { 
+    userId: req.user.id, 
+    email: req.user.email 
+  };
+  
+  const accessToken = generateToken(payload);
+  const refreshToken = generateRefreshToken(payload);
+
+  const user = {
+    id: req.user.id,
+    email: req.user.email,
+    username: req.user.username,
+    displayName: req.user.displayName,
+    avatarUrl: req.user.avatarUrl,
+  };
+
+  // Redirect to frontend with tokens
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}&user=${encodeURIComponent(JSON.stringify(user))}`;
+  
+  res.redirect(redirectUrl);
 });

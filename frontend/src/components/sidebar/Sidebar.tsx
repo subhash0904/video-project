@@ -16,7 +16,11 @@ const youItems = [
 ];
 
 const exploreItems = [
-  { label: "Trending", path: "/search?q=trending", icon: "🔥" },
+  { label: "Trending", path: "/", icon: "🔥" },
+  { label: "Gaming", path: "/?category=GAMING", icon: "🎮" },
+  { label: "Music", path: "/?category=MUSIC", icon: "🎵" },
+  { label: "Education", path: "/?category=EDUCATION", icon: "📚" },
+  { label: "Sports", path: "/?category=SPORTS", icon: "⚽" },
 ];
 
 interface Subscription {

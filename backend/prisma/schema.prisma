@@ -91,6 +91,10 @@ model Channel {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  // Soft delete (Rule 11)
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
+  
   // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   videos          Video[]
@@ -160,12 +164,19 @@ model Video {
   publishedAt     DateTime?
   processedAt     DateTime?
   
-  // Stats removed - moved to video_stats table (event-driven counters)
+  // Cached stats (denormalized for query performance - updated async from VideoStats)
+  // DO NOT update these directly! Use VideoStats table as source of truth
+  viewsCache      BigInt      @default(0)
+  likesCache      Int         @default(0)
   
   // Privacy & monetization
   isPublic        Boolean     @default(true)
   allowComments   Boolean     @default(true)
   ageRestricted   Boolean     @default(false)
+  
+  // Soft delete (Rule 11)
+  isDeleted       Boolean     @default(false)
+  deletedAt       DateTime?
   
   // Relations
   channel         Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -174,10 +185,6 @@ model Video {
   userLikes       Like[]
   comments        Comment[]
   analyticsEvents AnalyticsEvent[]
-  
-  @@index([channelId])
-  @@index([status])
-  @@index([type])
   stats           VideoStats?
   shares          Share[]
   
@@ -185,7 +192,12 @@ model Video {
   @@index([status])
   @@index([type])
   @@index([category])
-  @@index([publishedAt===============================
+  @@index([publishedAt])
+  @@index([viewsCache])
+  @@map("videos")
+}
+
+// ============================================
 // VIDEO QUALITY VARIANTS
 // ============================================
 
@@ -370,6 +382,10 @@ model Comment {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   edited          Boolean   @default(false)
+  
+  // Soft delete (Rule 11)
+  isDeleted       Boolean   @default(false)
+  deletedAt       DateTime?
   
   // Relations
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)

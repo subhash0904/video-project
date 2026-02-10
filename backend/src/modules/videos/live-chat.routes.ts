@@ -28,6 +28,11 @@ router.get('/live/:videoId/chat', async (req, res) => {
             avatarUrl: true,
           },
         },
+        _count: {
+          select: {
+            commentLikes: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -43,7 +48,7 @@ router.get('/live/:videoId/chat', async (req, res) => {
       content: comment.content,
       avatarUrl: comment.user?.avatarUrl,
       timestamp: comment.createdAt,
-      likesCount: comment.likes,
+      likesCount: comment._count.commentLikes,
     }));
 
     res.json({ success: true, data: chatMessages });

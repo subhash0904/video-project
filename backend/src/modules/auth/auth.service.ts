@@ -115,6 +115,7 @@ export const login = async (data: LoginData) => {
       displayName: true,
       avatarUrl: true,
       passwordHash: true,
+      twoFactorEnabled: true,
       createdAt: true,
     },
   });
@@ -123,11 +124,25 @@ export const login = async (data: LoginData) => {
     throw new AppError('Invalid email or password', 401);
   }
 
+  // Check if user has a password (not OAuth-only)
+  if (!user.passwordHash) {
+    throw new AppError('Please sign in with Google', 400);
+  }
+
   // Verify password
   const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
   if (!isValidPassword) {
     throw new AppError('Invalid email or password', 401);
+  }
+
+  // If 2FA is enabled, return partial response
+  if (user.twoFactorEnabled) {
+    return {
+      requiresTwoFactor: true,
+      userId: user.id,
+      message: 'Two-factor authentication required',
+    };
   }
 
   // Update last login
@@ -142,9 +157,10 @@ export const login = async (data: LoginData) => {
   const refreshToken = generateRefreshToken(payload);
 
   // Remove password hash from response
-  const { passwordHash: _, ...userWithoutPassword } = user;
+  const { passwordHash: _, twoFactorEnabled: __, ...userWithoutPassword } = user;
 
   return {
+    requiresTwoFactor: false,
     user: userWithoutPassword,
     accessToken,
     refreshToken,

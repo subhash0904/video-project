@@ -100,6 +100,11 @@ export const changePassword = async (
     throw new AppError('User not found', 404);
   }
 
+  // Check if user has a password (not OAuth-only)
+  if (!user.passwordHash) {
+    throw new AppError('Cannot change password for OAuth users', 400);
+  }
+
   // Verify current password
   const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isValid) {
@@ -142,7 +147,7 @@ export const getWatchHistory = async (
             title: true,
             thumbnailUrl: true,
             duration: true,
-            views: true,
+            viewsCache: true,
             type: true,
             channel: {
               select: {
@@ -202,8 +207,8 @@ export const getLikedVideos = async (
             title: true,
             thumbnailUrl: true,
             duration: true,
-            views: true,
-            likes: true,
+            viewsCache: true,
+            likesCache: true,
             type: true,
             publishedAt: true,
             channel: {

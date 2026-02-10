@@ -1,0 +1,91 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  
+jobs:
+  deploy:
+    name: Deploy to GCP VM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/gcp_key
+          chmod 600 ~/.ssh/gcp_key
+          ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy to GCP
+        env:
+          VM_IP: ${{ secrets.GCP_VM_IP }}
+          VM_USER: ${{ secrets.GCP_VM_USER }}
+        run: |
+          ssh -i ~/.ssh/gcp_key $VM_USER@$VM_IP << 'ENDSSH'
+            # Navigate to project directory
+            cd ~/video-project || exit 1
+            
+            # Pull latest code
+            echo "📥 Pulling latest code..."
+            git pull origin main || git pull origin master
+            
+            # Navigate to infra directory
+            cd infra
+            
+            # Stop existing containers
+            echo "🛑 Stopping existing containers..."
+            docker-compose -f docker-compose.production.yml down
+            
+            # Remove old images (optional, saves space)
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+            
+            # Pull/build and start containers
+            echo "🚀 Starting services..."
+            docker-compose -f docker-compose.production.yml up -d --build
+            
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+            
+            # Check health
+            echo "🏥 Checking service health..."
+            docker-compose -f docker-compose.production.yml ps
+            
+            echo "✅ Deployment complete!"
+          ENDSSH
+      
+      - name: Verify deployment
+        env:
+          VM_IP: ${{ secrets.GCP_VM_IP }}
+        run: |
+          echo "🔍 Verifying deployment..."
+          
+          # Wait a bit for services to stabilize
+          sleep 10
+          
+          # Check API Gateway health
+          curl -f http://$VM_IP/health || echo "⚠️ API Gateway health check failed"
+          
+          # Check backend health
+          curl -f http://$VM_IP:4000/health || echo "⚠️ Backend health check failed"
+          
+          # Check WebSocket
+          curl -f http://$VM_IP:4100/health || echo "⚠️ WebSocket health check failed"
+          
+          echo "✅ Verification complete"
+      
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/gcp_key

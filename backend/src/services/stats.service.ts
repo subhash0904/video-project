@@ -138,11 +138,17 @@ class StatsService {
         title: true,
         thumbnailUrl: true,
         duration: true,
-        views: true,
-        likes: true,
+        viewsCache: true,
+        likesCache: true,
         type: true,
         category: true,
         publishedAt: true,
+        stats: {
+          select: {
+            viewCount: true,
+            likeCount: true,
+          },
+        },
         channel: {
           select: {
             id: true,
@@ -169,27 +175,33 @@ class StatsService {
 
     const [videos, total] = await Promise.all([
       prisma.video.findMany({
-        where: { status: 'READY', isPublic: true, publishedAt: { gte: since } },
+        where: { status: 'READY', isPublic: true, isDeleted: false, publishedAt: { gte: since } },
         take: limit,
         skip,
-        orderBy: [{ views: 'desc' }, { likes: 'desc' }],
+        orderBy: [{ viewsCache: 'desc' }, { likesCache: 'desc' }],
         select: {
           id: true,
           title: true,
           thumbnailUrl: true,
           duration: true,
-          views: true,
-          likes: true,
+          viewsCache: true,
+          likesCache: true,
           type: true,
           category: true,
           publishedAt: true,
+          stats: {
+            select: {
+              viewCount: true,
+              likeCount: true,
+            },
+          },
           channel: {
             select: { id: true, name: true, handle: true, avatarUrl: true, verified: true },
           },
         },
       }),
       prisma.video.count({
-        where: { status: 'READY', isPublic: true, publishedAt: { gte: since } },
+        where: { status: 'READY', isPublic: true, isDeleted: false, publishedAt: { gte: since } },
       }),
     ]);
 

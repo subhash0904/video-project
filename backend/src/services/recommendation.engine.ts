@@ -26,12 +26,14 @@ interface VideoCandidate {
   title: string;
   thumbnailUrl: string | null;
   duration: number;
-  views: bigint | number;
-  likes: number;
   type: string;
   category: string | null;
   publishedAt: Date | null;
   channelId: string;
+  stats: {
+    viewCount: bigint;
+    likeCount: bigint;
+  } | null;
   channel: {
     id: string;
     name: string;
@@ -61,12 +63,16 @@ const VIDEO_SELECT = {
   title: true,
   thumbnailUrl: true,
   duration: true,
-  views: true,
-  likes: true,
   type: true,
   category: true,
   publishedAt: true,
   channelId: true,
+  stats: {
+    select: {
+      viewCount: true,
+      likeCount: true,
+    },
+  },
   channel: {
     select: {
       id: true,
@@ -164,7 +170,7 @@ async function generateCandidates(
       ? prisma.video.findMany({
           where: { ...baseWhere, category: { in: topCategories as any } },
           take: Math.ceil(targetCount * 0.3),
-          orderBy: [{ views: 'desc' }, { publishedAt: 'desc' }],
+          orderBy: [{ viewsCache: 'desc' }, { publishedAt: 'desc' }],
           select: VIDEO_SELECT,
         })
       : Promise.resolve([]);
@@ -176,7 +182,7 @@ async function generateCandidates(
       publishedAt: { gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
     },
     take: Math.ceil(targetCount * 0.2),
-    orderBy: { views: 'desc' },
+    orderBy: { viewsCache: 'desc' },
     select: VIDEO_SELECT,
   });
 
@@ -229,8 +235,9 @@ function rankCandidates(
       let reason = 'recommended';
 
       // --- Engagement signal (log-scaled views + likes) ---
-      const views = toNum(v.views);
-      const engagement = Math.log10(Math.max(1, views)) + Math.log10(Math.max(1, v.likes)) * 2;
+      const views = v.stats ? toNum(v.stats.viewCount) : 0;
+      const likes = v.stats ? toNum(v.stats.likeCount) : 0;
+      const engagement = Math.log10(Math.max(1, views)) + Math.log10(Math.max(1, likes)) * 2;
       score += engagement * 0.25;
 
       // --- Freshness boost (exponential decay, half-life 2 days) ---
@@ -255,7 +262,7 @@ function rankCandidates(
 
       // --- Like ratio proxy ---
       if (views > 0) {
-        const likeRatio = v.likes / views;
+        const likeRatio = likes / views;
         score += likeRatio * 5;
       }
 
@@ -408,7 +415,7 @@ export class RecommendationEngine {
       const ids = await redis.zrevrange('stats:trending', 0, limit - 1);
       if (ids.length > 0) {
         const videos = await prisma.video.findMany({
-          where: { id: { in: ids }, status: 'READY', isPublic: true },
+          where: { id: { in: ids }, status: 'READY', isPublic: true, isDeleted: false },
           select: VIDEO_SELECT,
         });
         // Preserve trending order
@@ -426,13 +433,14 @@ export class RecommendationEngine {
       where: {
         status: 'READY',
         isPublic: true,
+        isDeleted: false,
         publishedAt: {
           gte: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
           not: null,
         },
       },
       take: limit,
-      orderBy: { views: 'desc' },
+      orderBy: { viewsCache: 'desc' },
       select: VIDEO_SELECT,
     });
 

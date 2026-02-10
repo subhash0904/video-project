@@ -59,13 +59,29 @@ export const updateVideoValidation = [
 ];
 
 export const searchValidation = [
-  query('q').notEmpty().withMessage('Search query is required'),
+  query('q').optional().isString().withMessage('Search query must be a string'),
   query('category').optional().isIn(VIDEO_CATEGORIES),
+  query('voiceSearch').optional().isBoolean(),
 ];
 
 // ============================================
 // Controllers
 // ============================================
+
+/**
+ * Get all available video categories
+ * GET /api/videos/categories
+ */
+export const getCategories = asyncHandler(async (req: Request, res: Response) => {
+  const categories = VIDEO_CATEGORIES.map(cat => ({
+    value: cat,
+    label: cat.split('_').map(word => 
+      word.charAt(0) + word.slice(1).toLowerCase()
+    ).join(' & '),
+  }));
+
+  return successResponse(res, categories, 'Categories retrieved successfully');
+});
 
 export const getVideoFeed = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { page, limit } = getPaginationParams(
@@ -378,7 +394,7 @@ export const searchVideos = asyncHandler(async (req: AuthRequest, res: Response)
     return errorResponse(res, 'Validation failed', 400, errors.array());
   }
 
-  const query = req.query.q as string;
+  const query = (req.query.q as string) || '';
   const { page, limit } = getPaginationParams(
     req.query.page as string,
     req.query.limit as string

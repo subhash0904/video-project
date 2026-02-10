@@ -230,18 +230,19 @@ export const getTrendingVideos = async (limit: number = 20) => {
     },
     take: limit,
     orderBy: [
-      { views: 'desc' },
-      { likes: 'desc' },
+      { viewsCache: 'desc' },
+      { likesCache: 'desc' },
     ],
     select: {
       id: true,
       title: true,
       thumbnailUrl: true,
       duration: true,
-      views: true,
-      likes: true,
+      viewsCache: true,
+      likesCache: true,
       type: true,
       publishedAt: true,
+      stats: { select: { viewCount: true, likeCount: true } },
       channel: {
         select: {
           id: true,

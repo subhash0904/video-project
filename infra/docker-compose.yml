@@ -50,6 +50,11 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret-32chars}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-change-me-in-production-refresh-secret}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-change-me-encryption-secret-min-32-chars}
+      APP_NAME: ${APP_NAME:-Video Platform}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-your-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-your-google-client-secret}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:4000/api/auth/google/callback}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       UPLOAD_DIR: /app/uploads
       HLS_OUTPUT_DIR: /app/streaming/hls

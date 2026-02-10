@@ -647,13 +647,8 @@ async function seedChannels(users: any[]) {
       // Channel created a few days after user registration
       const channelCreatedAt = new Date(createdAt.getTime() + random.nextInt(1, 30) * 24 * 60 * 60 * 1000);
 
-      // Realistic subscriber distribution (power law)
-      let subscriberCount = 0;
-      if (userData.verified) {
-        subscriberCount = random.nextInt(500000, 2500000); // Verified: 500K-2.5M
-      } else {
-        subscriberCount = random.nextInt(10000, 150000); // Unverified: 10K-150K
-      }
+      // Subscriber count will be calculated after actual subscriptions are created
+      const subscriberCount = 0;
 
       const channel = await prisma.channel.create({
         data: {
@@ -670,7 +665,7 @@ async function seedChannels(users: any[]) {
 
       channels.push({ ...channel, userData });
       created++;
-      log(`Created channel: ${userData.channelName} (${subscriberCount.toLocaleString()} subs)`, 'success');
+      log(`Created channel: ${userData.channelName}`, 'success');
     } catch (error: any) {
       log(`Failed to create channel for ${userData.email}: ${error.message}`, 'error');
       skipped++;
@@ -715,15 +710,11 @@ async function seedVideos(channels: any[]) {
         const publishedAt = new Date(uploadedAt.getTime() + random.nextInt(5, 60) * 60 * 1000);
         const processedAt = new Date(uploadedAt.getTime() + random.nextInt(2, 10) * 60 * 1000);
 
-        // Views distribution (realistic power law)
-        const baseViews = channel.verified ? random.nextInt(50000, 500000) : random.nextInt(1000, 50000);
-        const ageMultiplier = 1 + (Date.now() - publishedAt.getTime()) / (365 * 24 * 60 * 60 * 1000);
-        const views = Math.floor(baseViews * ageMultiplier);
-
-        // Engagement metrics (realistic ratios)
-        const likes = Math.floor(views * random.nextInt(2, 8) / 100); // 2-8% like rate
-        const dislikes = Math.floor(likes * random.nextInt(2, 10) / 100); // 2-10% of likes
-        const commentCount = Math.floor(likes * random.nextInt(5, 15) / 100); // 5-15% of likes
+        // Initial counts set to 0, will be updated based on actual data
+        const views = 0;
+        const likes = 0;
+        const dislikes = 0;
+        const commentCount = 0;
 
         const video = await prisma.video.create({
           data: {
@@ -1026,6 +1017,79 @@ async function seedAnalytics(users: any[], videos: any[]) {
   log(`\n✅ Analytics: ${created} events created`, 'success');
 }
 
+async function updateCounters() {
+  log('\n🔄 Updating counters with actual data...', 'info');
+  
+  // STEP 1: Update video metrics first (views, likes, dislikes, comments)
+  const videos = await prisma.video.findMany();
+  let videoUpdateCount = 0;
+  for (const video of videos) {
+    const viewCount = await prisma.watchHistory.count({
+      where: { videoId: video.id },
+    });
+    
+    const likeCount = await prisma.like.count({
+      where: { videoId: video.id, type: LikeType.LIKE },
+    });
+    
+    const dislikeCount = await prisma.like.count({
+      where: { videoId: video.id, type: LikeType.DISLIKE },
+    });
+    
+    const commentCount = await prisma.comment.count({
+      where: { videoId: video.id },
+    });
+    
+    await prisma.video.update({
+      where: { id: video.id },
+      data: { 
+        views: BigInt(viewCount),
+        likes: likeCount,
+        dislikes: dislikeCount,
+        commentCount,
+      },
+    });
+    
+    videoUpdateCount++;
+    if (videoUpdateCount % 100 === 0) {
+      log(`Updated ${videoUpdateCount} videos...`, 'info');
+    }
+  }
+  
+  // STEP 2: Update channel metrics (subscriber count, video count, total views)
+  const channels = await prisma.channel.findMany();
+  for (const channel of channels) {
+    const subscriberCount = await prisma.subscription.count({
+      where: { channelId: channel.id },
+    });
+    
+    const videoCount = await prisma.video.count({
+      where: { channelId: channel.id },
+    });
+    
+    // Get updated videos with actual view counts
+    const channelVideos = await prisma.video.findMany({
+      where: { channelId: channel.id },
+      select: { views: true },
+    });
+    
+    const totalViews = channelVideos.reduce((sum, v) => sum + BigInt(v.views), BigInt(0));
+    
+    await prisma.channel.update({
+      where: { id: channel.id },
+      data: {
+        subscriberCount,
+        videoCount,
+        totalViews,
+      },
+    });
+    
+    log(`Updated ${channel.name}: ${subscriberCount} subs, ${videoCount} videos, ${totalViews.toString()} views`, 'success');
+  }
+  
+  log(`\n✅ All counters updated with actual data`, 'success');
+}
+
 // ============================================
 // MAIN SEED FUNCTION
 // ============================================
@@ -1051,6 +1115,9 @@ async function main() {
     await seedLikes(users, videos);
     await seedComments(users, videos);
     await seedAnalytics(users, videos);
+    
+    // Update all counters with actual data
+    await updateCounters();
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
