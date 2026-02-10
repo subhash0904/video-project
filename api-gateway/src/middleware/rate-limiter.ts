@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import { Redis } from 'ioredis';
+import { Request } from 'express';
 import { logger } from '../utils/logger.js';
 
 const redis = new Redis({
@@ -32,7 +33,7 @@ export const rateLimiter = rateLimit({
     message: 'Too many requests, please try again later.'
   },
   // Skip rate limiting for health checks
-  skip: (req) => req.path === '/health' || req.path === '/metrics'
+  skip: (req: Request) => req.path === '/health' || req.path === '/metrics'
 });
 
 // Strict rate limiter for authentication endpoints
@@ -73,7 +74,7 @@ export const apiKeyRateLimiter = rateLimit({
   max: 1000, // 1000 requests per minute
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => {
+  keyGenerator: (req: Request) => {
     return req.headers['x-api-key'] as string || req.ip || 'unknown';
   },
   store: new RedisStore({

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -48,7 +48,7 @@ app.use('/api', router);
 app.use(errorHandler);
 
 // 404 handler - Express 5 requires named parameter for wildcards
-app.use('/{*splat}', (req, res) => {
+app.use('/{*splat}', (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'

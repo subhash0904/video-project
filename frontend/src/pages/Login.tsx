@@ -128,11 +128,10 @@ export default function Login() {
           <div className="flex-1 h-px bg-neutral-200"></div>
         </div>
 
-        {/* Google Sign-In placeholder */}
+        {/* Google Sign-In */}
         <button
-          onClick={() => setError('Google authentication is coming soon')}
-          className="w-full mt-4 py-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 font-semibold transition flex items-center justify-center gap-2 opacity-75"
-          title="Coming soon"
+          onClick={() => window.location.href = '/api/auth/google'}
+          className="w-full mt-4 py-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 font-semibold transition flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#1f2937" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

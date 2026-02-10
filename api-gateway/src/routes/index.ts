@@ -61,86 +61,92 @@ const createServiceProxy = (serviceName: string, serviceUrl: string, pathRewrite
 // ======================
 router.use('/auth/register', authRateLimiter);
 router.use('/auth/login', authRateLimiter);
-router.use('/auth', createServiceProxy('user', services.user, { '^/api/auth': '/api/auth' }));
+router.use('/auth', createServiceProxy('user', services.user, { '^/auth': '/api/auth' }));
 
 // ======================
 // User Routes
 // ======================
 router.use('/users/:id/profile', optionalAuth);
 router.use('/users', authenticate);
-router.use('/users', createServiceProxy('user', services.user, { '^/api/users': '/api/users' }));
+router.use('/users', createServiceProxy('user', services.user, { '^/users': '/api/users' }));
 
 // ======================
 // Video Routes
 // ======================
-router.get('/videos/:id', optionalAuth, createServiceProxy('video', services.video, { '^/api/videos': '/api/videos' }));
-router.get('/videos', optionalAuth, createServiceProxy('video', services.video, { '^/api/videos': '/api/videos' }));
-router.post('/videos', authenticate, uploadRateLimiter, createServiceProxy('video', services.video, { '^/api/videos': '/api/videos' }));
-router.patch('/videos/:id', authenticate, createServiceProxy('video', services.video, { '^/api/videos': '/api/videos' }));
-router.delete('/videos/:id', authenticate, createServiceProxy('video', services.video, { '^/api/videos': '/api/videos' }));
+router.get('/videos/feed', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.get('/videos/search', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.get('/videos/categories', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.get('/videos/:id', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.get('/videos/:id/recommended', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.get('/videos', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.post('/videos', authenticate, uploadRateLimiter, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.post('/videos/:id/view', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.post('/videos/:id/watch', optionalAuth, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.patch('/videos/:id', authenticate, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
+router.delete('/videos/:id', authenticate, createServiceProxy('video', services.video, { '^/videos': '/api/videos' }));
 
 // ======================
 // Recommendations Routes
 // ======================
-router.get('/recommendations', optionalAuth, createServiceProxy('recommendation', services.recommendation, { '^/api/recommendations': '/api/recommendations' }));
-router.get('/recommendations/personalized', authenticate, createServiceProxy('recommendation', services.recommendation, { '^/api/recommendations': '/api/recommendations' }));
+router.get('/recommendations', optionalAuth, createServiceProxy('recommendation', services.recommendation, { '^/recommendations': '/api/recommendations' }));
+router.get('/recommendations/personalized', authenticate, createServiceProxy('recommendation', services.recommendation, { '^/recommendations': '/api/recommendations' }));
 
 // ======================
 // Comment Routes
 // ======================
-router.get('/videos/:videoId/comments', optionalAuth, createServiceProxy('comment', services.comment, { '^/api': '/api' }));
-router.post('/videos/:videoId/comments', authenticate, createServiceProxy('comment', services.comment, { '^/api': '/api' }));
-router.patch('/comments/:id', authenticate, createServiceProxy('comment', services.comment, { '^/api/comments': '/api/comments' }));
-router.delete('/comments/:id', authenticate, createServiceProxy('comment', services.comment, { '^/api/comments': '/api/comments' }));
+router.get('/videos/:videoId/comments', optionalAuth, createServiceProxy('comment', services.comment, { '^/videos': '/api/videos' }));
+router.post('/videos/:videoId/comments', authenticate, createServiceProxy('comment', services.comment, { '^/videos': '/api/videos' }));
+router.patch('/comments/:id', authenticate, createServiceProxy('comment', services.comment, { '^/comments': '/api/comments' }));
+router.delete('/comments/:id', authenticate, createServiceProxy('comment', services.comment, { '^/comments': '/api/comments' }));
 
 // ======================
 // Like/Dislike Routes
 // ======================
-router.post('/videos/:videoId/like', authenticate, createServiceProxy('like', services.like, { '^/api': '/api' }));
-router.delete('/videos/:videoId/like', authenticate, createServiceProxy('like', services.like, { '^/api': '/api' }));
-router.post('/videos/:videoId/dislike', authenticate, createServiceProxy('like', services.like, { '^/api': '/api' }));
-router.post('/comments/:commentId/like', authenticate, createServiceProxy('like', services.like, { '^/api': '/api' }));
+router.post('/videos/:videoId/like', authenticate, createServiceProxy('like', services.like, { '^/videos': '/api/videos' }));
+router.delete('/videos/:videoId/like', authenticate, createServiceProxy('like', services.like, { '^/videos': '/api/videos' }));
+router.post('/videos/:videoId/dislike', authenticate, createServiceProxy('like', services.like, { '^/videos': '/api/videos' }));
+router.post('/comments/:commentId/like', authenticate, createServiceProxy('like', services.like, { '^/comments': '/api/comments' }));
 
 // ======================
 // Subscription Routes
 // ======================
-router.post('/channels/:channelId/subscribe', authenticate, createServiceProxy('subscription', services.subscription, { '^/api': '/api' }));
-router.delete('/channels/:channelId/subscribe', authenticate, createServiceProxy('subscription', services.subscription, { '^/api': '/api' }));
-router.get('/subscriptions', authenticate, createServiceProxy('subscription', services.subscription, { '^/api/subscriptions': '/api/subscriptions' }));
+router.post('/channels/:channelId/subscribe', authenticate, createServiceProxy('subscription', services.subscription, { '^/channels': '/api/channels' }));
+router.delete('/channels/:channelId/subscribe', authenticate, createServiceProxy('subscription', services.subscription, { '^/channels': '/api/channels' }));
+router.get('/subscriptions', authenticate, createServiceProxy('subscription', services.subscription, { '^/subscriptions': '/api/subscriptions' }));
 
 // ======================
 // Channel Routes
 // ======================
-router.get('/channels/:id', optionalAuth, createServiceProxy('user', services.user, { '^/api/channels': '/api/channels' }));
-router.patch('/channels/:id', authenticate, createServiceProxy('user', services.user, { '^/api/channels': '/api/channels' }));
+router.get('/channels/:id', optionalAuth, createServiceProxy('user', services.user, { '^/channels': '/api/channels' }));
+router.patch('/channels/:id', authenticate, createServiceProxy('user', services.user, { '^/channels': '/api/channels' }));
 
 // ======================
 // Analytics Routes
 // ======================
-router.post('/analytics/view', optionalAuth, createServiceProxy('analytics', services.analytics, { '^/api/analytics': '/api/analytics' }));
-router.post('/analytics/event', optionalAuth, createServiceProxy('analytics', services.analytics, { '^/api/analytics': '/api/analytics' }));
-router.get('/analytics/dashboard', authenticate, createServiceProxy('analytics', services.analytics, { '^/api/analytics': '/api/analytics' }));
+router.post('/analytics/view', optionalAuth, createServiceProxy('analytics', services.analytics, { '^/analytics': '/api/analytics' }));
+router.post('/analytics/event', optionalAuth, createServiceProxy('analytics', services.analytics, { '^/analytics': '/api/analytics' }));
+router.get('/analytics/dashboard', authenticate, createServiceProxy('analytics', services.analytics, { '^/analytics': '/api/analytics' }));
 
 // ======================
 // Search Routes
 // ======================
-router.get('/search', optionalAuth, createServiceProxy('video', services.video, { '^/api/search': '/api/search' }));
+router.get('/search', optionalAuth, createServiceProxy('video', services.video, { '^/search': '/api/videos/search' }));
 
 // ======================
 // Notification Routes
 // ======================
-router.get('/notifications', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.get('/notifications/unread', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.patch('/notifications/:id/read', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.patch('/notifications/read-all', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.delete('/notifications/:id', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.get('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
-router.put('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.get('/notifications', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.get('/notifications/unread', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.patch('/notifications/:id/read', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.patch('/notifications/read-all', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.delete('/notifications/:id', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.get('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
+router.put('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/notifications': '/api/notifications' }));
 
 // ======================
 // Event Routes
 // ======================
-router.use('/events', createServiceProxy('user', services.user, { '^/api/events': '/api/events' }));
+router.use('/events', createServiceProxy('user', services.user, { '^/events': '/api/events' }));
 
 // ======================
 // Live Chat Routes

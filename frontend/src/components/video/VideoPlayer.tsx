@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type Hls from 'hls.js';
+import { getStreamBaseUrl } from '../../utils/urlHelpers';
 
 interface VideoPlayerProps {
   videoId: string;
@@ -49,7 +50,7 @@ export function VideoPlayer({ videoId, autoplay = false, onTimeUpdate, onEnded }
     const video = videoRef.current;
     if (!video) return;
 
-    const streamBase = import.meta.env.VITE_STREAM_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4000';
+    const streamBase = getStreamBaseUrl();
     const videoUrl = `${streamBase}/hls/${videoId}/master.m3u8`;
 
     const setupHls = async () => {

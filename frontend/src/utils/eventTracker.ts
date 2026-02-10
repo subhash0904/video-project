@@ -5,7 +5,9 @@
  * Clients are thin — this batches and sends to /api/events/track.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { getApiBaseUrl } from './urlHelpers';
+
+const API_BASE_URL = getApiBaseUrl();
 const BATCH_INTERVAL = 5000; // flush every 5s
 const MAX_BATCH = 50;
 

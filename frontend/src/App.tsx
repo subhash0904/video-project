@@ -30,6 +30,7 @@ const StudioUpload = lazy(() => import("./pages/studio/StudioUpload"));
 const StudioAudioLibrary = lazy(() => import("./pages/studio/StudioAudioLibrary"));
 const StudioSettings = lazy(() => import("./pages/studio/StudioSettings"));
 const StudioFeedback = lazy(() => import("./pages/studio/StudioFeedback"));
+const StudioGoLive = lazy(() => import("./pages/studio/StudioGoLive"));
 
 function PageLoader() {
   return (
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="earn" element={<StudioEarn />} />
               <Route path="customization" element={<StudioCustomization />} />
               <Route path="audio-library" element={<StudioAudioLibrary />} />
+              <Route path="go-live" element={<StudioGoLive />} />
               <Route path="settings" element={<StudioSettings />} />
               <Route path="feedback" element={<StudioFeedback />} />
             </Route>

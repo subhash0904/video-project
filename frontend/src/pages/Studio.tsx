@@ -35,6 +35,7 @@ export default function Studio() {
   const menuItems = [
     { path: '/studio', label: 'Dashboard', icon: <DashboardIcon /> },
     { path: '/studio/content', label: 'Content', icon: <ContentIcon /> },
+    { path: '/studio/go-live', label: 'Go live', icon: <GoLiveIcon /> },
     { path: '/studio/analytics', label: 'Analytics', icon: <AnalyticsIcon /> },
     { path: '/studio/community', label: 'Community', icon: <CommunityIcon /> },
     { path: '/studio/subtitles', label: 'Subtitles', icon: <SubtitlesIcon /> },
@@ -47,11 +48,11 @@ export default function Studio() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#282828]">
+    <div className="flex h-screen bg-[#282828] overflow-hidden">
       {/* Sidebar */}
-      <div className="w-60 bg-[#212121] flex flex-col border-r border-gray-800">
+      <div className="w-60 bg-[#212121] flex flex-col border-r border-gray-800 h-full overflow-hidden">
         {/* Header */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-4 border-b border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -62,13 +63,13 @@ export default function Studio() {
           </div>
         </div>
 
-        {/* Channel Info */}
-        <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center gap-3">
+        {/* Channel Info + Create Button */}
+        <div className="p-4 border-b border-gray-800 flex-shrink-0">
+          <div className="flex items-center gap-3 mb-4">
             {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-16 h-16 rounded-full" />
+              <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-full" />
             ) : (
-              <div className="w-16 h-16 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+              <div className="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                 {user?.displayName?.[0] || 'U'}
               </div>
             )}
@@ -77,9 +78,19 @@ export default function Studio() {
               <p className="text-gray-400 text-xs truncate">{user?.displayName || 'User'}</p>
             </div>
           </div>
+          {/* Create Button */}
+          <button
+            onClick={() => navigate('/upload')}
+            className="w-full flex items-center justify-center gap-2 bg-white text-black font-semibold py-2.5 px-4 rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            CREATE
+          </button>
         </div>
 
-        {/* Menu Items */}
+        {/* Menu Items - Scrollable */}
         <nav className="flex-1 overflow-y-auto py-2">
           {menuItems.map((item) => (
             <NavLink
@@ -101,8 +112,8 @@ export default function Studio() {
         </nav>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      {/* Main Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
         <Outlet />
       </div>
     </div>
@@ -194,6 +205,14 @@ function FeedbackIcon() {
   return (
     <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
       <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM13 14h-2v-2h2v2zm0-4h-2V6h2v4z" />
+    </svg>
+  );
+}
+
+function GoLiveIcon() {
+  return (
+    <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
     </svg>
   );
 }

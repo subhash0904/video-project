@@ -253,7 +253,7 @@ export default function Channel() {
                   <Link
                     key={video.id}
                     to={`/shorts/${video.id}`}
-                    className="aspect-[9/16] rounded-xl overflow-hidden relative group hover:scale-105 transition-transform"
+                    className="aspect-9/16 rounded-xl overflow-hidden relative group hover:scale-105 transition-transform"
                   >
                     <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                     <div className="absolute bottom-0 left-0 right-0 p-3 bg-linear-to-t from-black/80 to-transparent">

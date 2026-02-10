@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient, recommendationsApi, videosApi, usersApi } from '../lib/api';
 import type { Video, ApiResponse } from '../types';
 import { VIDEO_CATEGORY_FILTERS } from '../utils/categories';
+import { getStreamBaseUrl } from '../utils/urlHelpers';
 
 export default function Shorts() {
   const navigate = useNavigate();
@@ -254,7 +255,7 @@ export default function Shorts() {
           >
             {/* Video */}
             <video
-              src={`${import.meta.env.VITE_STREAM_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:4000'}/hls/${short.id}/master.m3u8`}
+              src={`${getStreamBaseUrl()}/hls/${short.id}/master.m3u8`}
               className="h-full w-auto max-w-full object-contain"
               autoPlay={index === activeIndex}
               muted
