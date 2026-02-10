@@ -11,11 +11,15 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./load-balancer/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./load-balancer/conf.d:/etc/nginx/conf.d:ro
+      - ../load-balancer/nginx.conf:/etc/nginx/nginx.conf:ro
       - hls_data:/app/streaming/hls:ro
     depends_on:
       - api-gateway
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ============================================================================
   # API GATEWAY (Traffic Controller)
@@ -119,6 +123,7 @@ services:
       BATCH_SIZE: 100
       BATCH_TIMEOUT: 5000
       COUNTER_FLUSH_INTERVAL: 30000
+      HEALTH_PORT: 4200
     depends_on:
       kafka:
         condition: service_healthy
@@ -127,6 +132,11 @@ services:
       postgres:
         condition: service_healthy
     command: ["node", "dist/consumers/index.js"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:4200/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ============================================================================
   # REALTIME SERVICE (WebSocket)
@@ -332,6 +342,11 @@ services:
       - hls_data:/app/streaming/hls:ro
     depends_on:
       - api-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # ============================================================================
   # TRANSCODER SERVICE (FFmpeg Worker)

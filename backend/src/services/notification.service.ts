@@ -217,23 +217,64 @@ class NotificationService {
       });
       if (!channel) return;
 
-      // Get subscribers (max 1000 at a time for safety)
-      const subs = await prisma.subscription.findMany({
-        where: { channelId: data.channelId, notificationsOn: true },
-        select: { userId: true },
-        take: 1000,
-      });
+      // Paginated fanout — cursor-based to handle channels with >1000 subscribers
+      const PAGE_SIZE = 1000;
+      let cursor: string | undefined;
 
-      for (const sub of subs) {
-        await this.create({
-          userId: sub.userId,
-          type: 'NEW_VIDEO',
-          title: `${channel.name} uploaded a video`,
-          body: data.title,
-          thumbnailUrl: channel.avatarUrl ?? undefined,
-          actionUrl: `/watch?v=${data.videoId}`,
-          metadata: { channelId: data.channelId, videoId: data.videoId },
+      while (true) {
+        const subs = await prisma.subscription.findMany({
+          where: { channelId: data.channelId, notificationsOn: true },
+          select: { id: true, userId: true },
+          take: PAGE_SIZE,
+          ...(cursor
+            ? { skip: 1, cursor: { id: cursor } }
+            : {}),
+          orderBy: { id: 'asc' },
         });
+
+        if (subs.length === 0) break;
+
+        // Batch-fetch NotificationPreferences for these users + channel
+        const prefs = await (db.notificationPreference as any).findMany({
+          where: {
+            channelId: data.channelId,
+            userId: { in: subs.map((s: any) => s.userId) },
+          },
+          select: { userId: true, notifyUploads: true, delivery: true },
+        }).catch(() => [] as any[]);
+
+        const prefMap = new Map<string, { notifyUploads: boolean; delivery: string[] }>();
+        for (const p of prefs) {
+          prefMap.set(p.userId, p);
+        }
+
+        // Fire notifications for this batch (parallelise within batch)
+        await Promise.allSettled(
+          subs.map((sub) => {
+            const pref = prefMap.get(sub.userId);
+            // Respect notifyUploads preference (default true if no pref row)
+            if (pref && pref.notifyUploads === false) return Promise.resolve();
+
+            return this.create({
+              userId: sub.userId,
+              type: 'NEW_VIDEO',
+              title: `${channel.name} uploaded a video`,
+              body: data.title,
+              thumbnailUrl: channel.avatarUrl ?? undefined,
+              actionUrl: `/watch?v=${data.videoId}`,
+              metadata: {
+                channelId: data.channelId,
+                videoId: data.videoId,
+                delivery: pref?.delivery ?? ['in_app', 'push'],
+              },
+            });
+          }),
+        );
+
+        // If we got fewer than PAGE_SIZE, we've exhausted all rows
+        if (subs.length < PAGE_SIZE) break;
+
+        cursor = subs[subs.length - 1].id;
       }
     } catch (err) {
       logger.error('notifySubscribersOfNewVideo error:', err);

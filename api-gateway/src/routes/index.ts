@@ -124,4 +124,26 @@ router.get('/analytics/dashboard', authenticate, createServiceProxy('analytics',
 // ======================
 router.get('/search', optionalAuth, createServiceProxy('video', services.video, { '^/api/search': '/api/search' }));
 
+// ======================
+// Notification Routes
+// ======================
+router.get('/notifications', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.get('/notifications/unread', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.patch('/notifications/:id/read', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.patch('/notifications/read-all', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.delete('/notifications/:id', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.get('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+router.put('/notifications/preferences/:channelId', authenticate, createServiceProxy('user', services.user, { '^/api/notifications': '/api/notifications' }));
+
+// ======================
+// Event Routes
+// ======================
+router.use('/events', createServiceProxy('user', services.user, { '^/api/events': '/api/events' }));
+
+// ======================
+// Live Chat Routes
+// ======================
+router.get('/live/:videoId/chat', optionalAuth, createServiceProxy('user', services.user, { '^/api/live': '/api/live' }));
+router.post('/live/:videoId/chat', authenticate, createServiceProxy('user', services.user, { '^/api/live': '/api/live' }));
+
 logger.info('API Gateway routes configured');

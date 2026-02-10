@@ -146,6 +146,25 @@ export const googleCallback = asyncHandler(async (req: AuthRequest, res: Respons
   const accessToken = generateToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Set tokens as HTTP-only cookies instead of URL query params
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 15 * 60 * 1000, // 15 minutes (match JWT expiry)
+    path: '/',
+  });
+
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
+  });
+
   const user = {
     id: req.user.id,
     email: req.user.email,
@@ -154,9 +173,10 @@ export const googleCallback = asyncHandler(async (req: AuthRequest, res: Respons
     avatarUrl: req.user.avatarUrl,
   };
 
-  // Redirect to frontend with tokens
+  // Redirect to frontend — user profile is still passed as query param
+  // (non-secret, for fast client hydration). Tokens are in cookies.
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}&user=${encodeURIComponent(JSON.stringify(user))}`;
+  const redirectUrl = `${frontendUrl}/auth/callback?user=${encodeURIComponent(JSON.stringify(user))}`;
   
   res.redirect(redirectUrl);
 });

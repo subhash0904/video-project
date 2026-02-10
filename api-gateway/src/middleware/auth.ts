@@ -27,7 +27,12 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7);
-    const secret = process.env.JWT_SECRET || 'secret';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      logger.error('JWT_SECRET environment variable is not set');
+      res.status(500).json({ success: false, message: 'Server configuration error' });
+      return;
+    }
 
     try {
       const decoded = jwt.verify(token, secret) as {
@@ -82,7 +87,11 @@ export const optionalAuth = async (
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      const secret = process.env.JWT_SECRET || 'secret';
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        next(); // Skip auth if JWT_SECRET not configured
+        return;
+      }
 
       try {
         const decoded = jwt.verify(token, secret) as {

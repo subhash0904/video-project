@@ -43,6 +43,7 @@ class ApiClient {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
     const data = await response.json();
@@ -87,6 +88,7 @@ class ApiClient {
       method: 'POST',
       headers,
       body: formData,
+      credentials: 'include',
     });
     const data = await response.json();
     if (!response.ok) {

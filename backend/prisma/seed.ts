@@ -32,12 +32,40 @@ async function seed() {
   await prisma.watchHistory.deleteMany({});
   await prisma.subscription.deleteMany({});
   await prisma.videoQuality.deleteMany({});
+  await (prisma as any).videoCategoryLink.deleteMany({});
   await prisma.video.deleteMany({});
   await prisma.channel.deleteMany({});
   await prisma.user.deleteMany({});
+  await (prisma as any).category.deleteMany({});
   
   await clearCache();
   console.log('🧹 Cleared Redis cache');
+
+  // ---- Seed Category table from VideoCategory enum values ----
+  const categoryDefs = [
+    { name: 'Film & Animation', slug: 'film-animation' },
+    { name: 'Autos & Vehicles', slug: 'autos-vehicles' },
+    { name: 'Music', slug: 'music' },
+    { name: 'Pets & Animals', slug: 'pets-animals' },
+    { name: 'Sports', slug: 'sports' },
+    { name: 'Travel & Events', slug: 'travel-events' },
+    { name: 'Gaming', slug: 'gaming' },
+    { name: 'People & Blogs', slug: 'people-blogs' },
+    { name: 'Comedy', slug: 'comedy' },
+    { name: 'Entertainment', slug: 'entertainment' },
+    { name: 'News & Politics', slug: 'news-politics' },
+    { name: 'Howto & Style', slug: 'howto-style' },
+    { name: 'Education', slug: 'education' },
+    { name: 'Science & Tech', slug: 'science-tech' },
+    { name: 'Nonprofits & Activism', slug: 'nonprofits-activism' },
+    { name: 'Kids', slug: 'kids' },
+    { name: 'Other', slug: 'other' },
+  ];
+
+  for (const cat of categoryDefs) {
+    await (prisma as any).category.create({ data: cat });
+  }
+  console.log(`✅ Seeded ${categoryDefs.length} categories`);
 
   // Hash password function
   const hashPassword = async (password: string) => {

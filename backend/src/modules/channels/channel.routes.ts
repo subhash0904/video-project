@@ -52,11 +52,8 @@ router.post('/:id/subscribe', authenticate, async (req, res) => {
       },
     });
 
-    // Increment subscriber count
-    await prisma.channel.update({
-      where: { id: channelId },
-      data: { subscriberCount: { increment: 1 } },
-    });
+    // subscriberCount updated by async worker via event (Rule 6)
+    // DO NOT increment channel.subscriberCount directly
 
     // Emit event for notifications
     emitUserSubscribed({
@@ -87,11 +84,8 @@ router.delete('/:id/subscribe', authenticate, async (req, res) => {
       where: { userId_channelId: { userId, channelId } },
     });
 
-    // Decrement subscriber count
-    await prisma.channel.update({
-      where: { id: channelId },
-      data: { subscriberCount: { decrement: 1 } },
-    });
+    // subscriberCount updated by async worker via event (Rule 6)
+    // DO NOT decrement channel.subscriberCount directly
 
     // Emit event
     emitUserSubscribed({

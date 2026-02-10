@@ -27,14 +27,19 @@ export const authenticate = async (
   next: NextFunction
 ) => {
   try {
-    // Get token from header
+    // Get token from header or cookie
     const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('No token provided', 401);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if ((req as any).cookies?.accessToken) {
+      token = (req as any).cookies.accessToken;
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    if (!token) {
+      throw new AppError('No token provided', 401);
+    }
 
     // Verify token
     let decoded: JwtPayload;
@@ -117,12 +122,17 @@ export const optionalAuth = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next();
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if ((req as any).cookies?.accessToken) {
+      token = (req as any).cookies.accessToken;
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      return next();
+    }
 
     try {
       const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;

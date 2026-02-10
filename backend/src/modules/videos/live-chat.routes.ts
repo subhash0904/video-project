@@ -116,11 +116,8 @@ router.post('/live/:videoId/chat', optionalAuth, async (req, res) => {
       io.to(`video-${videoId}`).emit('new-comment', chatMessage);
     }
 
-    // Increment video comment count
-    await prisma.video.update({
-      where: { id: videoId },
-      data: { commentCount: { increment: 1 } },
-    });
+    // Comment count updated by async worker via event (Rule 6)
+    // DO NOT increment video.commentCount directly
 
     // Emit event for notifications & stats
     emitVideoCommented({

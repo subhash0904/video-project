@@ -24,6 +24,9 @@ router.get('/:videoId/comments', async (req, res) => {
             avatarUrl: true,
           },
         },
+        _count: {
+          select: { commentLikes: true },
+        },
         replies: {
           include: {
             user: {
@@ -33,14 +36,27 @@ router.get('/:videoId/comments', async (req, res) => {
                 avatarUrl: true,
               },
             },
+            _count: {
+              select: { commentLikes: true },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
       },
-      orderBy: sort === 'new' ? { createdAt: 'desc' } : { likes: 'desc' },
+      orderBy: sort === 'new' ? { createdAt: 'desc' } : { createdAt: 'desc' },
     });
 
-    res.json({ success: true, data: comments });
+    // Map _count.commentLikes to `likes` for backward compatibility with frontend
+    const mapped = comments.map((c: any) => ({
+      ...c,
+      likes: c._count?.commentLikes ?? 0,
+      replies: c.replies?.map((r: any) => ({
+        ...r,
+        likes: r._count?.commentLikes ?? 0,
+      })),
+    }));
+
+    res.json({ success: true, data: mapped });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -83,11 +99,8 @@ router.post('/:videoId/comments', authenticate, async (req, res) => {
       },
     });
 
-    // Increment video comment count
-    await prisma.video.update({
-      where: { id: videoId },
-      data: { commentCount: { increment: 1 } },
-    });
+    // Comment count updated by async worker via event (Rule 6)
+    // DO NOT increment video.commentCount directly
 
     // Emit event for notification & stats
     emitVideoCommented({
@@ -118,7 +131,7 @@ router.post('/:videoId/comments', authenticate, async (req, res) => {
   }
 });
 
-// Like a comment
+// Like a comment (with deduplication via CommentLike table)
 router.post('/:videoId/comments/:commentId/like', authenticate, async (req, res) => {
   try {
     const commentId = req.params.commentId as string;
@@ -128,12 +141,41 @@ router.post('/:videoId/comments/:commentId/like', authenticate, async (req, res)
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    await prisma.comment.update({
-      where: { id: commentId },
-      data: { likes: { increment: 1 } },
+    // Check for existing like (deduplicate — one like per user per comment)
+    const existingLike = await prisma.commentLike.findUnique({
+      where: {
+        userId_commentId: {
+          userId,
+          commentId,
+        },
+      },
     });
 
-    res.json({ success: true });
+    if (existingLike) {
+      if (existingLike.type === 'LIKE') {
+        // Remove like
+        await prisma.commentLike.delete({ where: { id: existingLike.id } });
+        return res.json({ success: true, action: 'removed' });
+      } else {
+        // Change from dislike to like
+        await prisma.commentLike.update({
+          where: { id: existingLike.id },
+          data: { type: 'LIKE' },
+        });
+        return res.json({ success: true, action: 'changed' });
+      }
+    }
+
+    // Create new like
+    await prisma.commentLike.create({
+      data: {
+        userId,
+        commentId,
+        type: 'LIKE',
+      },
+    });
+
+    res.json({ success: true, action: 'added' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -167,11 +209,8 @@ router.delete('/:videoId/comments/:commentId', authenticate, async (req, res) =>
       where: { OR: [{ id: commentId }, { parentId: commentId }] },
     });
 
-    // Decrement video comment count
-    await prisma.video.update({
-      where: { id: comment.videoId },
-      data: { commentCount: { decrement: 1 + replyCount } },
-    });
+    // Comment count updated by async worker (Rule 6)
+    // DO NOT decrement video.commentCount directly
 
     res.json({ success: true });
   } catch (error: any) {
@@ -185,10 +224,8 @@ router.post('/:videoId/view', optionalAuth, async (req, res) => {
     const videoId = req.params.videoId as string;
     const userId = (req as any).user?.userId;
 
-    await prisma.video.update({
-      where: { id: videoId },
-      data: { views: { increment: 1 } },
-    });
+    // View count updated by async worker via event only (Rule 6)
+    // DO NOT increment any counter directly
 
     // Record analytics event
     if (userId) {

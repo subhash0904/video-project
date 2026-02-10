@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { logger } from './logger.js';
+import { upsertVideoStats, syncVideoCacheCounters, shutdownDb } from './db.js';
 
 const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
@@ -13,7 +14,7 @@ redis.on('connect', () => {
   logger.info('Redis connected for event streaming');
 });
 
-redis.on('error', (err) => {
+redis.on('error', (err: Error) => {
   logger.error('Redis error:', err);
 });
 
@@ -61,7 +62,43 @@ export class CounterAggregator {
       }
       await pipeline.exec();
 
-      logger.info(`Flushed ${batch.length} counters successfully`);
+      // ---- DB write path: persist aggregated deltas to VideoStats ----
+      const videoDeltas = new Map<string, { views: number; likes: number; dislikes: number; comments: number }>();
+      for (const [key, value] of batch) {
+        const parts = key.split(':');
+        // keys look like  video:<id>:views | video:<id>:likes | video:<id>:dislikes | video:<id>:comments
+        if (parts[0] === 'video' && parts.length >= 3) {
+          const videoId = parts[1];
+          const stat = parts[2]; // views | likes | dislikes | comments
+          if (!videoDeltas.has(videoId)) {
+            videoDeltas.set(videoId, { views: 0, likes: 0, dislikes: 0, comments: 0 });
+          }
+          const d = videoDeltas.get(videoId)!;
+          if (stat === 'views') d.views += value;
+          else if (stat === 'likes') d.likes += value;
+          else if (stat === 'dislikes') d.dislikes += value;
+          else if (stat === 'comments') d.comments += value;
+        }
+      }
+
+      // Batch-upsert into VideoStats + sync Video cache columns
+      const dbWrites: Promise<void>[] = [];
+      for (const [videoId, d] of videoDeltas) {
+        dbWrites.push(
+          upsertVideoStats(videoId, {
+            viewCount: d.views,
+            likeCount: d.likes,
+            dislikeCount: d.dislikes,
+            commentCount: d.comments,
+          }),
+        );
+        if (d.views || d.likes) {
+          dbWrites.push(syncVideoCacheCounters(videoId, d.views, d.likes));
+        }
+      }
+      await Promise.allSettled(dbWrites);
+
+      logger.info(`Flushed ${batch.length} counters successfully (Redis + DB)`);
       
       // Clear local counters after flush
       this.counters.clear();
@@ -73,6 +110,7 @@ export class CounterAggregator {
   async shutdown(): Promise<void> {
     clearInterval(this.flushInterval);
     await this.flush();
+    await shutdownDb();
     await redis.quit();
     logger.info('Counter aggregator shutdown complete');
   }

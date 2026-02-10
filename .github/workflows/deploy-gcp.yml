@@ -27,63 +27,84 @@ jobs:
           chmod 600 ~/.ssh/gcp_key
           ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
       
-      - name: Deploy to GCP
+      - name: Deploy to GCP (with rollback support)
         env:
           VM_IP: ${{ secrets.GCP_VM_IP }}
           VM_USER: ${{ secrets.GCP_VM_USER }}
         run: |
           ssh -i ~/.ssh/gcp_key $VM_USER@$VM_IP << 'ENDSSH'
-            # Navigate to project directory
+            set -e
             cd ~/video-project || exit 1
-            
-            # Pull latest code
+
+            # ---- snapshot current state for rollback ----
+            PREV_COMMIT=$(git rev-parse HEAD)
+            echo "📌 Previous commit: $PREV_COMMIT"
+
+            cd infra
+            # Tag running images so we can restore them
+            for SVC in backend frontend api-gateway event-streaming realtime-service transcoder; do
+              IMG=$(docker-compose -f docker-compose.production.yml images -q "$SVC" 2>/dev/null || true)
+              if [ -n "$IMG" ]; then
+                docker tag "$IMG" "video-platform/${SVC}:rollback" 2>/dev/null || true
+              fi
+            done
+            cd ..
+
+            # ---- deploy new code ----
             echo "📥 Pulling latest code..."
             git pull origin main || git pull origin master
-            
-            # Navigate to infra directory
+
             cd infra
-            
-            # Stop existing containers
+
             echo "🛑 Stopping existing containers..."
             docker-compose -f docker-compose.production.yml down
-            
-            # Remove old images (optional, saves space)
-            echo "🧹 Cleaning up old images..."
+
+            echo "🧹 Cleaning up dangling images..."
             docker image prune -f
-            
-            # Pull/build and start containers
+
             echo "🚀 Starting services..."
             docker-compose -f docker-compose.production.yml up -d --build
-            
-            # Wait for services to be healthy
-            echo "⏳ Waiting for services to start..."
-            sleep 30
-            
-            # Check health
-            echo "🏥 Checking service health..."
+
+            echo "⏳ Waiting for services to become healthy..."
+            sleep 45
+
+            # ---- health-gate ----
+            HEALTHY=true
+            for PORT in 80 4000 4100; do
+              if ! curl -sf --max-time 10 "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+                echo "❌ Health check failed on port ${PORT}"
+                HEALTHY=false
+              fi
+            done
+
+            if [ "$HEALTHY" = "false" ]; then
+              echo "⚠️  Rolling back to previous commit ${PREV_COMMIT}..."
+              docker-compose -f docker-compose.production.yml down
+              cd ..
+              git checkout "$PREV_COMMIT"
+              cd infra
+              docker-compose -f docker-compose.production.yml up -d --build
+              echo "⏳ Waiting for rollback to stabilise..."
+              sleep 30
+              echo "🔙 Rollback complete — running on ${PREV_COMMIT}"
+              exit 1
+            fi
+
+            echo "✅ Deployment healthy!"
             docker-compose -f docker-compose.production.yml ps
-            
             echo "✅ Deployment complete!"
           ENDSSH
       
       - name: Verify deployment
+        if: success()
         env:
           VM_IP: ${{ secrets.GCP_VM_IP }}
         run: |
           echo "🔍 Verifying deployment..."
-          
-          # Wait a bit for services to stabilize
           sleep 10
-          
-          # Check API Gateway health
           curl -f http://$VM_IP/health || echo "⚠️ API Gateway health check failed"
-          
-          # Check backend health
           curl -f http://$VM_IP:4000/health || echo "⚠️ Backend health check failed"
-          
-          # Check WebSocket
           curl -f http://$VM_IP:4100/health || echo "⚠️ WebSocket health check failed"
-          
           echo "✅ Verification complete"
       
       - name: Cleanup SSH

@@ -1,6 +1,7 @@
 import { prisma, cache } from '../../config/db.js';
 import type { VideoCategory } from '@prisma/client';
 import { AppError } from '../../middleware/errorHandler.js';
+import { emitVideoViewed } from '../events/event.producer.js';
 
 // ============================================
 // Get Video Feed (Home Page)
@@ -136,25 +137,30 @@ export const getVideoById = async (videoId: string, userId?: string) => {
     throw new AppError('Video not found', 404);
   }
 
-  if (!video.isPublic && video.status !== 'READY') {
-    throw new AppError('Video not available', 404);
+  // Visibility enforcement (server-side, Rule 13)
+  if (!video.isPublic) {
+    // Private video — only accessible by the channel owner
+    const isOwner = userId
+      ? await prisma.channel.findFirst({
+          where: { id: video.channelId, userId },
+          select: { id: true },
+        })
+      : null;
+    if (!isOwner) {
+      throw new AppError('Video not available', 404);
+    }
   }
 
-  // Increment view count via VideoStats (event-driven, Rule 6)
-  prisma.videoStats
-    .upsert({
-      where: { videoId },
-      update: { viewCount: { increment: 1 } },
-      create: { videoId, viewCount: 1 },
-    })
-    .then(() => {
-      // Also update cache column for sorting
-      return prisma.video.update({
-        where: { id: videoId },
-        data: { viewsCache: { increment: 1 } },
-      });
-    })
-    .catch((err: unknown) => console.error('Failed to increment view count:', err));
+  // Emit view event — counters updated by async worker only (Rule 6)
+  // DO NOT increment counters directly here
+  if (userId) {
+    emitVideoViewed({
+      videoId,
+      userId,
+      watchDuration: 0,
+      completed: false,
+    }).catch((err: unknown) => console.error('Failed to emit view event:', err));
+  }
 
   // Add watch history if user is authenticated
   if (userId) {
@@ -214,13 +220,8 @@ export const uploadVideo = async (data: UploadVideoData) => {
     },
   });
 
-  // Increment channel video count
-  await prisma.channel.update({
-    where: { id: data.channelId },
-    data: {
-      videoCount: { increment: 1 },
-    },
-  });
+  // Channel videoCount will be updated by async worker via video:uploaded event (Rule 6)
+  // DO NOT increment channel.videoCount directly
 
   // Invalidate caches
   await cache.delPattern('feed:*');
@@ -241,6 +242,7 @@ interface UpdateVideoData {
   allowComments?: boolean;
   ageRestricted?: boolean;
   category?: VideoCategory;
+  categoryIds?: string[]; // many-to-many Category links
 }
 
 export const updateVideo = async (
@@ -262,10 +264,13 @@ export const updateVideo = async (
     throw new AppError('Unauthorized to update this video', 403);
   }
 
+  // Extract categoryIds before passing to prisma.video.update
+  const { categoryIds, ...videoData } = data;
+
   // Update video
   const updated = await prisma.video.update({
     where: { id: videoId },
-    data,
+    data: videoData,
     include: {
       channel: {
         select: {
@@ -277,6 +282,18 @@ export const updateVideo = async (
       },
     },
   });
+
+  // Sync many-to-many Category links if categoryIds provided
+  if (categoryIds && Array.isArray(categoryIds)) {
+    // Delete existing links then re-create
+    await (prisma as any).videoCategoryLink.deleteMany({ where: { videoId } });
+    if (categoryIds.length > 0) {
+      await (prisma as any).videoCategoryLink.createMany({
+        data: categoryIds.map((categoryId: string) => ({ videoId, categoryId })),
+        skipDuplicates: true,
+      });
+    }
+  }
 
   // Invalidate cache
   await cache.del(`video:${videoId}`);
@@ -310,13 +327,8 @@ export const deleteVideo = async (videoId: string, channelId: string) => {
     data: { status: 'DELETED' },
   });
 
-  // Decrement channel video count
-  await prisma.channel.update({
-    where: { id: channelId },
-    data: {
-      videoCount: { decrement: 1 },
-    },
-  });
+  // Channel videoCount will be updated by async worker (Rule 6)
+  // DO NOT decrement channel.videoCount directly
 
   // Invalidate cache
   await cache.del(`video:${videoId}`);
@@ -357,60 +369,32 @@ export const toggleLike = async (
 
   if (existingLike) {
     if (existingLike.type === type) {
-      // Remove like if same type
-      await prisma.$transaction([
-        prisma.like.delete({
-          where: { id: existingLike.id },
-        }),
-        prisma.videoStats.upsert({
-          where: { videoId },
-          update: {
-            [type === 'LIKE' ? 'likeCount' : 'dislikeCount']: { decrement: 1 },
-          },
-          create: { videoId },
-        }),
-      ]);
+      // Remove like if same type — counter updated by async worker (Rule 6)
+      await prisma.like.delete({
+        where: { id: existingLike.id },
+      });
 
       await cache.del(`video:${videoId}`);
       return { action: 'removed', type };
     } else {
-      // Change like type
-      await prisma.$transaction([
-        prisma.like.update({
-          where: { id: existingLike.id },
-          data: { type },
-        }),
-        prisma.videoStats.upsert({
-          where: { videoId },
-          update: {
-            likeCount: { [type === 'LIKE' ? 'increment' : 'decrement']: 1 },
-            dislikeCount: { [type === 'DISLIKE' ? 'increment' : 'decrement']: 1 },
-          },
-          create: { videoId },
-        }),
-      ]);
+      // Change like type — counter updated by async worker (Rule 6)
+      await prisma.like.update({
+        where: { id: existingLike.id },
+        data: { type },
+      });
 
       await cache.del(`video:${videoId}`);
       return { action: 'changed', type };
     }
   } else {
-    // Create new like
-    await prisma.$transaction([
-      prisma.like.create({
-        data: {
-          userId,
-          videoId,
-          type,
-        },
-      }),
-      prisma.videoStats.upsert({
-        where: { videoId },
-        update: {
-          [type === 'LIKE' ? 'likeCount' : 'dislikeCount']: { increment: 1 },
-        },
-        create: { videoId },
-      }),
-    ]);
+    // Create new like — counter updated by async worker (Rule 6)
+    await prisma.like.create({
+      data: {
+        userId,
+        videoId,
+        type,
+      },
+    });
 
     await cache.del(`video:${videoId}`);
     return { action: 'added', type };

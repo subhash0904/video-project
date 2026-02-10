@@ -56,6 +56,7 @@ export const updateVideoValidation = [
   body('allowComments').optional().isBoolean(),
   body('ageRestricted').optional().isBoolean(),
   body('category').optional().isIn(VIDEO_CATEGORIES),
+  body('categoryIds').optional().isArray(),
 ];
 
 export const searchValidation = [
@@ -71,16 +72,27 @@ export const searchValidation = [
 /**
  * Get all available video categories
  * GET /api/videos/categories
+ * Returns both the enum values and the Category table rows (for many-to-many linking).
  */
 export const getCategories = asyncHandler(async (req: Request, res: Response) => {
-  const categories = VIDEO_CATEGORIES.map(cat => ({
+  const enumCategories = VIDEO_CATEGORIES.map(cat => ({
     value: cat,
     label: cat.split('_').map(word => 
       word.charAt(0) + word.slice(1).toLowerCase()
     ).join(' & '),
   }));
 
-  return successResponse(res, categories, 'Categories retrieved successfully');
+  // Also fetch the Category table rows for many-to-many linking
+  let dbCategories: any[] = [];
+  try {
+    dbCategories = await (prisma as any).category.findMany({
+      orderBy: { name: 'asc' },
+    });
+  } catch {
+    // Table may not be seeded yet — non-fatal
+  }
+
+  return successResponse(res, { enum: enumCategories, categories: dbCategories }, 'Categories retrieved successfully');
 });
 
 export const getVideoFeed = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -173,7 +185,7 @@ export const uploadVideo = asyncHandler(async (req: AuthRequest, res: Response) 
     }
 
     // Get form data
-    const { title, description, tags, isPublic = true, allowComments = true, category } = req.body;
+    const { title, description, tags, isPublic = true, allowComments = true, category, categoryIds } = req.body;
 
     if (!title) {
       await fs.unlink(videoFile.path);
@@ -227,6 +239,21 @@ export const uploadVideo = asyncHandler(async (req: AuthRequest, res: Response) 
     if (!pipelineStarted) {
       logger.warn(`Failed to start pipeline for video ${video.id}, falling back to direct queue`);
       await queueVideoForTranscoding({ id: video.id, rawFilePath: videoFile.path });
+    }
+
+    // Link many-to-many Category rows if categoryIds provided
+    if (categoryIds) {
+      const ids: string[] = Array.isArray(categoryIds)
+        ? categoryIds
+        : typeof categoryIds === 'string'
+          ? categoryIds.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : [];
+      if (ids.length > 0) {
+        await (prisma as any).videoCategoryLink.createMany({
+          data: ids.map((cid: string) => ({ videoId: video.id, categoryId: cid })),
+          skipDuplicates: true,
+        }).catch((err: unknown) => logger.warn('Failed to link categories:', err));
+      }
     }
     
     logger.info(`Video uploaded successfully: ${video.id}`);

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import config from './config/env.js';
@@ -30,14 +31,17 @@ const app = express();
 // CORS
 app.use(
   cors({
-    origin: config.frontendUrl,
+    origin: config.frontendUrl || 'http://localhost:5173',
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Passport initialization
 app.use(passport.initialize());

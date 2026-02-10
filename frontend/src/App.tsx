@@ -16,7 +16,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const History = lazy(() => import("./pages/History"));
 const Liked = lazy(() => import("./pages/Liked"));
 const Subscriptions = lazy(() => import("./pages/Subscriptions"));
-const Studio = lazy(() => import("./pages/Studio"));
+const Studio = lazy(() => import(\"./pages/Studio\"));\nconst AuthCallback = lazy(() => import(\"./pages/AuthCallback\"));
 const StudioDashboard = lazy(() => import("./pages/studio/StudioDashboard"));
 const StudioContent = lazy(() => import("./pages/studio/StudioContent"));
 const StudioAnalytics = lazy(() => import("./pages/studio/StudioAnalytics"));
@@ -51,7 +51,7 @@ export default function App() {
             <Route path="/shorts/:id" element={<Shorts />} />
             <Route path="/search" element={<Search />} />
             <Route path="/channel/:handle" element={<Channel />} />
-            <Route path="/login" element={<Login />} />
+            <Route path=\"/login\" element={<Login />} />\n            <Route path=\"/auth/callback\" element={<AuthCallback />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/history" element={<History />} />

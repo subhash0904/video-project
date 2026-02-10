@@ -1,5 +1,6 @@
 import { prisma } from '../../config/db.js';
 import { EventType } from '@prisma/client';
+import { emitVideoShared } from '../events/event.producer.js';
 
 // ============================================
 // Track Analytics Event
@@ -117,12 +118,32 @@ export const trackShare = async (
   videoId: string,
   platform?: string
 ) => {
+  // 1. Create analytics event
   await trackEvent({
     userId,
     videoId,
     eventType: 'VIDEO_SHARE',
     metadata: { platform },
   });
+
+  // 2. Create Share record in the shares table
+  await prisma.share.create({
+    data: {
+      userId: userId ?? null,
+      videoId,
+      platform: platform ?? null,
+    },
+  }).catch(() => {}); // non-fatal
+
+  // 3. Increment VideoStats.shareCount
+  await prisma.videoStats.upsert({
+    where: { videoId },
+    create: { videoId, shareCount: 1 },
+    update: { shareCount: { increment: 1 } },
+  }).catch(() => {}); // non-fatal
+
+  // 4. Emit event for stats/trending pipeline
+  emitVideoShared({ videoId, userId, platform }).catch(() => {});
 
   return { success: true };
 };

@@ -280,23 +280,13 @@ export const subscribeToChannel = async (userId: string, channelId: string) => {
     throw new AppError('Already subscribed to this channel', 400);
   }
 
-  // Create subscription and increment subscriber count
-  await prisma.$transaction([
-    prisma.subscription.create({
-      data: {
-        userId,
-        channelId,
-      },
-    }),
-    prisma.channel.update({
-      where: { id: channelId },
-      data: {
-        subscriberCount: {
-          increment: 1,
-        },
-      },
-    }),
-  ]);
+  // Create subscription — counter updated by async worker (Rule 6)
+  await prisma.subscription.create({
+    data: {
+      userId,
+      channelId,
+    },
+  });
 
   // Invalidate channel cache
   await cache.delPattern(`channel:${channelId}:*`);
@@ -322,22 +312,12 @@ export const unsubscribeFromChannel = async (userId: string, channelId: string) 
     throw new AppError('Not subscribed to this channel', 400);
   }
 
-  // Delete subscription and decrement subscriber count
-  await prisma.$transaction([
-    prisma.subscription.delete({
-      where: {
-        id: subscription.id,
-      },
-    }),
-    prisma.channel.update({
-      where: { id: channelId },
-      data: {
-        subscriberCount: {
-          decrement: 1,
-        },
-      },
-    }),
-  ]);
+  // Delete subscription — counter updated by async worker (Rule 6)
+  await prisma.subscription.delete({
+    where: {
+      id: subscription.id,
+    },
+  });
 
   // Invalidate channel cache
   await cache.delPattern(`channel:${channelId}:*`);
