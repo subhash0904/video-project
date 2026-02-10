@@ -1,5 +1,6 @@
 // Prisma Schema for Video Platform
 // Database: PostgreSQL
+// Architecture: YouTube-correct (Users ≠ Channels)
 
 generator client {
   provider = "prisma-client-js"
@@ -18,7 +19,7 @@ model User {
   id              String    @id @default(uuid())
   email           String    @unique
   username        String    @unique
-  passwordHash    String
+  passwordHash    String?   // Optional for OAuth users
   displayName     String
   avatarUrl       String?
   
@@ -27,6 +28,14 @@ model User {
   verificationToken String?
   resetToken      String?
   resetTokenExpiry  DateTime?
+  
+  // OAuth fields
+  googleId        String?   @unique
+  
+  // Two-Factor Authentication
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?   // Encrypted TOTP secret
+  backupCodes      String?   // Encrypted JSON array of backup codes
   
   // Preferences
   language        String    @default("en")
@@ -44,11 +53,14 @@ model User {
   watchHistory    WatchHistory[]
   likes           Like[]
   comments        Comment[]
+  commentLikes    CommentLike[]
   analyticsEvents AnalyticsEvent[]
   notifications   Notification[]
+  shares          Share[]
   
   @@index([email])
   @@index([username])
+  @@index([googleId])
   @@map("users")
 }
 
@@ -148,11 +160,7 @@ model Video {
   publishedAt     DateTime?
   processedAt     DateTime?
   
-  // Stats (denormalized for performance)
-  views           BigInt      @default(0)
-  likes           Int         @default(0)
-  dislikes        Int         @default(0)
-  commentCount    Int         @default(0)
+  // Stats removed - moved to video_stats table (event-driven counters)
   
   // Privacy & monetization
   isPublic        Boolean     @default(true)
@@ -170,13 +178,14 @@ model Video {
   @@index([channelId])
   @@index([status])
   @@index([type])
+  stats           VideoStats?
+  shares          Share[]
+  
+  @@index([channelId])
+  @@index([status])
+  @@index([type])
   @@index([category])
-  @@index([publishedAt])
-  @@index([views])
-  @@map("videos")
-}
-
-// ============================================
+  @@index([publishedAt===============================
 // VIDEO QUALITY VARIANTS
 // ============================================
 
@@ -203,6 +212,49 @@ model VideoQuality {
   @@map("video_qualities")
 }
 
+// VIDEO STATS (EVENT-DRIVEN COUNTERS)
+// ============================================
+
+model VideoStats {
+  videoId       String   @id
+  
+  // Aggregated counters (updated via background workers/Kafka)
+  viewCount     BigInt   @default(0)
+  likeCount     BigInt   @default(0)
+  dislikeCount  BigInt   @default(0)
+  commentCount  BigInt   @default(0)
+  shareCount    BigInt   @default(0)
+  
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  video         Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@map("video_stats")
+}
+
+// ============================================
+// SHARES (EVENT TABLE)
+// ============================================
+
+model Share {
+  id          String   @id @default(uuid())
+  userId      String?  // Nullable for anonymous shares
+  videoId     String
+  
+  platform    String?  // facebook, twitter, whatsapp, copy_link, etc.
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@index([videoId, createdAt])
+  @@index([userId])
+  @@map("shares")
+}
+
+// ============================================
 // ============================================
 // SUBSCRIPTION
 // ============================================
@@ -246,10 +298,7 @@ model WatchHistory {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   video           Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   
-  @@unique([userId, videoId])
-  @@index([userId, watchedAt])
-  @@index([videoId])
-  @@map("watch_history")
+  @@uap("watch_history")
 }
 
 // ============================================
@@ -262,6 +311,7 @@ enum LikeType {
 }
 
 model Like {
+  commentLikes    CommentLike[]
   id        String   @id @default(uuid())
   userId    String
   videoId   String
@@ -277,6 +327,28 @@ model Like {
   @@index([userId])
   @@index([videoId])
   @@map("likes")
+}
+
+// ============================================
+// COMMENT LIKES/DISLIKES
+// ============================================
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  userId    String
+  commentId String
+  
+  type      LikeType
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, commentId])
+  @@index([userId])
+  @@index([commentId])
+  @@map("comment_likes")
 }
 
 // ============================================
