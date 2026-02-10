@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { logger } from './logger.js';
 import { upsertVideoStats, syncVideoCacheCounters, shutdownDb } from './db.js';
 

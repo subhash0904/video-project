@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import http from 'http';
 import { logger } from '../logger.js';
 import { startViewConsumer } from './view-consumer.js';
 import { startLikeConsumer } from './like-consumer.js';
@@ -8,6 +9,8 @@ import { counterAggregator } from '../redis.js';
 import { shutdown as shutdownKafka } from '../kafka.js';
 
 dotenv.config();
+
+const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || '4200');
 
 async function startAllConsumers() {
   logger.info('🚀 Starting all event consumers...');
@@ -20,6 +23,14 @@ async function startAllConsumers() {
       startCommentConsumer(),
       startSubscriptionConsumer()
     ]);
+
+    // Start health endpoint for Docker health checks
+    http.createServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('ok');
+    }).listen(HEALTH_PORT, () => {
+      logger.info(`✅ Health endpoint listening on :${HEALTH_PORT}/`);
+    });
 
     logger.info('✅ All event consumers started successfully');
   } catch (error) {

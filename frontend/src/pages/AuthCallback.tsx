@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 /**
@@ -10,7 +10,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
   const processed = useRef(false);
 
   useEffect(() => {
@@ -29,7 +28,6 @@ export default function AuthCallback() {
 
       const errorParam = searchParams.get('error');
       if (errorParam) {
-        // Navigate away synchronously to avoid setState in effect body
         navigate(`/login?error=${encodeURIComponent(errorParam)}`, { replace: true });
         return;
       }
@@ -40,21 +38,6 @@ export default function AuthCallback() {
       navigate('/login?error=auth_failed', { replace: true });
     }
   }, [searchParams, navigate]);
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <h2 className="text-xl font-semibold text-red-500">Authentication Failed</h2>
-        <p className="text-neutral-400">{error}</p>
-        <button
-          onClick={() => navigate('/login', { replace: true })}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-center h-[60vh]">

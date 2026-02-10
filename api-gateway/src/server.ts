@@ -47,8 +47,8 @@ app.use('/api', router);
 // Error handling
 app.use(errorHandler);
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler - Express 5 requires named parameter for wildcards
+app.use('/{*splat}', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'

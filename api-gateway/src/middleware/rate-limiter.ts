@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { logger } from '../utils/logger.js';
 
 const redis = new Redis({
@@ -9,7 +9,7 @@ const redis = new Redis({
   maxRetriesPerRequest: 3
 });
 
-redis.on('error', (err) => {
+redis.on('error', (err: any) => {
   logger.error('Redis connection error:', err);
 });
 
@@ -24,8 +24,7 @@ export const rateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
-    // @ts-ignore - Redis client compatibility
-    client: redis,
+    sendCommand: async (command: string, ...args: string[]) => redis.call(command, ...args) as Promise<any>,
     prefix: 'rl:',
   }),
   message: {
@@ -43,8 +42,7 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
-    // @ts-ignore
-    client: redis,
+    sendCommand: async (command: string, ...args: string[]) => redis.call(command, ...args) as Promise<any>,
     prefix: 'rl:auth:',
   }),
   message: {
@@ -60,8 +58,7 @@ export const uploadRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
-    // @ts-ignore
-    client: redis,
+    sendCommand: async (command: string, ...args: string[]) => redis.call(command, ...args) as Promise<any>,
     prefix: 'rl:upload:',
   }),
   message: {
@@ -80,8 +77,7 @@ export const apiKeyRateLimiter = rateLimit({
     return req.headers['x-api-key'] as string || req.ip || 'unknown';
   },
   store: new RedisStore({
-    // @ts-ignore
-    client: redis,
+    sendCommand: async (command: string, ...args: string[]) => redis.call(command, ...args) as Promise<any>,
     prefix: 'rl:apikey:',
   })
 });

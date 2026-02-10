@@ -26,29 +26,31 @@ const createServiceProxy = (serviceName: string, serviceUrl: string, pathRewrite
     target: serviceUrl,
     changeOrigin: true,
     pathRewrite: pathRewrite || undefined,
-    onProxyReq: (proxyReq, req: any) => {
-      // Forward user info if authenticated
-      if (req.user) {
-        proxyReq.setHeader('X-User-Id', req.user.id);
-        proxyReq.setHeader('X-User-Email', req.user.email);
-        if (req.user.role) {
-          proxyReq.setHeader('X-User-Role', req.user.role);
+    on: {
+      proxyReq: (proxyReq: any, req: any) => {
+        // Forward user info if authenticated
+        if (req.user) {
+          proxyReq.setHeader('X-User-Id', req.user.id);
+          proxyReq.setHeader('X-User-Email', req.user.email);
+          if (req.user.role) {
+            proxyReq.setHeader('X-User-Role', req.user.role);
+          }
         }
-      }
 
-      // Forward original IP
-      proxyReq.setHeader('X-Forwarded-For', req.ip);
-      proxyReq.setHeader('X-Gateway-Region', process.env.REGION || 'default');
-    },
-    onError: (err, req, res: any) => {
-      logger.error(`Proxy error for ${serviceName}:`, err);
-      
-      if (!res.headersSent) {
-        res.status(503).json({
-          success: false,
-          message: `${serviceName} service unavailable`,
-          error: process.env.NODE_ENV === 'development' ? err.message : undefined
-        });
+        // Forward original IP
+        proxyReq.setHeader('X-Forwarded-For', req.ip);
+        proxyReq.setHeader('X-Gateway-Region', process.env.REGION || 'default');
+      },
+      error: (err: any, req: any, res: any) => {
+        logger.error(`Proxy error for ${serviceName}:`, err);
+        
+        if (!res.headersSent) {
+          res.status(503).json({
+            success: false,
+            message: `${serviceName} service unavailable`,
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+          });
+        }
       }
     }
   });

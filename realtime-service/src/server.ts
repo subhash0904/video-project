@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { logger } from './logger.js';
