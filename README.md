@@ -1,4 +1,4 @@
-# Video Platform Project
+# Youtube
 
 ## Overview
 A scalable, production-ready video platform featuring video upload, streaming, search, notifications, and real-time features. Built with a modern microservices architecture and designed for cloud deployment.
