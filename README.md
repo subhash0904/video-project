@@ -1,7 +1,9 @@
 # Youtube
 
 ## Overview
-A scalable, production-ready video platform featuring video upload, streaming, search, notifications, and real-time features. Built with a modern microservices architecture and designed for cloud deployment.
+Designed and deployed a distributed video streaming platform on Google Cloud Platform, enabling adaptive, low-latency playback through asynchronous FFmpeg-powered HLS transcoding pipelines and optimized media delivery via Nginx and load balancing.
+Architected an event-driven system using Node.js (TypeScript), Express, Prisma, PostgreSQL (primary + read replicas), Kafka, Redis Sentinel (HA), Docker, and Nginx, ensuring realtime engagement, efficient caching, and scalable traffic handling.
+Engineered for high availability, controlled concurrency, horizontal scalability, and consistent user experience under production-level load.
 
 ---
 
@@ -48,7 +50,7 @@ A scalable, production-ready video platform featuring video upload, streaming, s
 - **OpenAPI YAML** (API specs)
 
 ---
-1. Problem Statement
+**1. Problem Statement**
 
 Design and implement a scalable video streaming platform that supports:
 
@@ -66,7 +68,7 @@ Cloud deployment
 
 Horizontal scalability
 
-2. System Architecture
+**2. System Architecture**
 
 Client
 → Nginx (Reverse Proxy / CDN Layer)
@@ -89,7 +91,7 @@ Decoupled realtime service
 
 Controlled processing concurrency
 
-3. Frontend Architecture
+**3. Frontend Architecture**
 
 Stack:
 
@@ -123,7 +125,7 @@ Optimized bundle size
 
 Strict linting rules
 
-4. Backend Architecture
+**4. Backend Architecture**
 
 Stack:
 
@@ -157,7 +159,7 @@ Structured logging
 
 Centralized error handling
 
-5. Database Layer
+**5. Database Layer**
 
 Primary:
 
@@ -185,7 +187,7 @@ Prisma Migrate
 
 Versioned schema evolution
 
-6. Media Processing Pipeline
+**6. Media Processing Pipeline**
 
 Upload Flow:
 
@@ -223,7 +225,7 @@ Failure-safe state transitions
 
 Adaptive streaming ready
 
-7. Streaming Strategy
+**7. Streaming Strategy**
 
 Protocol:
 
@@ -241,7 +243,7 @@ Adaptive bitrate switching
 
 CDN-ready structure
 
-8. Messaging & Realtime
+**8. Messaging & Realtime**
 
 Backbone:
 
@@ -265,7 +267,7 @@ WebSocket-based delivery
 
 Event-driven updates
 
-9. DevOps & Deployment
+**9. DevOps & Deployment**
 
 Containerization:
 
@@ -291,7 +293,7 @@ OpenAPI validation
 
 Seed and verification tooling
 
-10. Core Features
+**10. Core Features**
 
 Video upload & processing
 
@@ -311,7 +313,7 @@ Microservice-ready architecture
 
 Production Docker setup
 
-11. Scalability Characteristics
+**11. Scalability Characteristics**
 
 Stateless backend
 
@@ -327,7 +329,7 @@ Cloud deployment flexibility
 
 Supports incremental scaling without architectural redesign.
 
-12. Engineering Focus
+**12. Engineering Focus**
 
 This project emphasizes:
 
@@ -343,7 +345,7 @@ Cloud-native thinking
 
 Operational discipline
 
-13. Future Expansion
+**13. Future Expansion**
 
 Autoscaling workers
 
