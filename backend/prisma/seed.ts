@@ -234,13 +234,19 @@ async function seed() {
         channelId: channel.id,
         thumbnailUrl: `https://picsum.photos/seed/${i}/1280/720`,
         status: 'READY' as any,
+        hlsUrl: null, // Will be set below after we know the video ID
         isPublic: true,
         publishedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // Last 30 days
-        views: 0, // Will be updated based on actual watch history
-        likes: 0,
-        dislikes: 0,
-        commentCount: 0,
+        viewsCache: 0,
+        likesCache: 0,
+        // Only set fields that exist in the schema
       },
+    });
+
+    // Set hlsUrl so the video player can find the stream
+    await prisma.video.update({
+      where: { id: video.id },
+      data: { hlsUrl: `/hls/${video.id}/master.m3u8` },
     });
     createdVideos.push(video);
     console.log(`✅ Created video: ${vid.title}`);
@@ -292,8 +298,8 @@ async function seed() {
     await prisma.video.update({
       where: { id: video.id },
       data: {
-        likes: likeCount_db,
-        dislikes: dislikeCount_db,
+        likesCache: likeCount_db,
+        // dislikes are not tracked in the video model
       },
     });
   }
@@ -337,12 +343,7 @@ async function seed() {
       }
     }
 
-    // Update comment count
-    const count = await prisma.comment.count({ where: { videoId: video.id, parentId: null } });
-    await prisma.video.update({
-      where: { id: video.id },
-      data: { commentCount: count },
-    });
+    // No commentCount field on video model; skip
   }
 
   // Create watch history
@@ -373,7 +374,7 @@ async function seed() {
     const viewCount = await prisma.watchHistory.count({ where: { videoId: video.id } });
     await prisma.video.update({
       where: { id: video.id },
-      data: { views: viewCount },
+      data: { viewsCache: viewCount },
     });
   }
 
@@ -381,9 +382,9 @@ async function seed() {
   for (const channel of channels) {
     const videos = await prisma.video.findMany({
       where: { channelId: channel.id },
-      select: { views: true },
+      select: { viewsCache: true },
     });
-    const totalViews = videos.reduce((sum, v) => sum + BigInt(v.views), BigInt(0));
+    const totalViews = videos.reduce((sum, v) => sum + BigInt(v.viewsCache), BigInt(0));
     await prisma.channel.update({
       where: { id: channel.id },
       data: { totalViews },

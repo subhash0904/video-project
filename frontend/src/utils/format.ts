@@ -6,6 +6,7 @@
  * Format view count (e.g., 1234 -> "1.2K", 1234567 -> "1.2M")
  */
 export function formatViews(views: number): string {
+  if (views == null || Number.isNaN(views)) return '0';
   if (views >= 1_000_000_000) {
     return `${(views / 1_000_000_000).toFixed(1)}B`;
   }

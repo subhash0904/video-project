@@ -54,6 +54,7 @@ export const getVideoFeed = async (
         title: true,
         description: true,
         thumbnailUrl: true,
+        hlsUrl: true,
         duration: true,
         viewsCache: true,
         likesCache: true,
@@ -443,6 +444,7 @@ export const searchVideos = async (
   const whereClause: any = {
     status: 'READY',
     isPublic: true,
+    isDeleted: false,
     publishedAt: { not: null },
     OR: [
       {
@@ -455,6 +457,22 @@ export const searchVideos = async (
         description: {
           contains: query,
           mode: 'insensitive',
+        },
+      },
+      {
+        channel: {
+          name: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+      },
+      {
+        channel: {
+          handle: {
+            contains: query,
+            mode: 'insensitive',
+          },
         },
       },
     ],
@@ -480,9 +498,10 @@ export const searchVideos = async (
 
   if (filters?.uploadDate) {
     const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dateMap: Record<string, Date> = {
       hour: new Date(now.getTime() - 3600000),
-      today: new Date(now.setHours(0, 0, 0, 0)),
+      today: todayStart,
       week: new Date(now.getTime() - 7 * 24 * 3600000),
       month: new Date(now.getTime() - 30 * 24 * 3600000),
       year: new Date(now.getTime() - 365 * 24 * 3600000),
@@ -509,6 +528,7 @@ export const searchVideos = async (
         title: true,
         description: true,
         thumbnailUrl: true,
+        hlsUrl: true,
         duration: true,
         viewsCache: true,
         likesCache: true,
@@ -579,6 +599,7 @@ export const getRecommendedVideos = async (
       id: true,
       title: true,
       thumbnailUrl: true,
+      hlsUrl: true,
       duration: true,
       viewsCache: true,
       likesCache: true,

@@ -309,7 +309,7 @@ export default function Shorts() {
                   className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${
                     subscribedChannels[short.channel.id]
                       ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
-                      : 'bg-white text-black hover:bg-gray-200'
+                      : 'bg-red-600 text-white hover:bg-red-700'
                   }`}
                 >
                   {subscribedChannels[short.channel.id] ? 'Subscribed' : 'Subscribe'}

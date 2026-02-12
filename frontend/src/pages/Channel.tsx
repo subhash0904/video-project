@@ -136,11 +136,13 @@ export default function Channel() {
   return (
     <div className="w-full">
       {/* Channel Banner */}
-      <div className="w-full h-48 bg-linear-to-r from-amber-100 via-rose-100 to-orange-100">
-        {channel.bannerUrl && (
+      {channel.bannerUrl ? (
+        <div className="w-full h-48">
           <img src={channel.bannerUrl} alt="Channel banner" className="w-full h-full object-cover" />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="w-full h-36 bg-gradient-to-r from-red-700 via-red-600 to-red-500" />
+      )}
 
       {/* Channel Header */}
       <div className="max-w-7xl mx-auto px-4">
@@ -160,7 +162,7 @@ export default function Channel() {
                 </svg>
               )}
             </div>
-            <p className="text-neutral-600 mt-1">@{channel.handle}</p>
+            <p className="text-neutral-600 mt-1">{channel.handle.startsWith('@') ? channel.handle : `@${channel.handle}`}</p>
             <div className="flex items-center gap-3 mt-2 text-sm text-neutral-600">
               <span>{formatNumber(channel.subscriberCount)} subscribers</span>
               <span>&middot;</span>

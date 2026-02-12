@@ -11,6 +11,7 @@ interface Video {
   title: string;
   description: string;
   thumbnailUrl: string;
+  hlsUrl?: string | null;
   duration: number;
   views: bigint | number;
   likes: number;
@@ -40,6 +41,7 @@ export default function Watch() {
   const [error, setError] = useState('');
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [isLive] = useState(false);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
   const lastTrackedRef = useRef(-1);
 
   useEffect(() => {
@@ -134,15 +136,17 @@ export default function Watch() {
 
   return (
     <div className="mx-auto py-6" style={{ maxWidth: '1920px' }}>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
+      <div className={`grid grid-cols-1 gap-6 ${isTheaterMode ? '' : 'lg:grid-cols-[1fr_400px]'}`}>
         {/* LEFT: Video Player and Details */}
         <div className="w-full">
           {/* Video Player */}
           <div className="mb-4 rounded-3xl overflow-hidden bg-black shadow-sm">
             <VideoPlayer
               videoId={video.id}
+              hlsUrl={video.hlsUrl}
               title={video.title}
               autoplay={false}
+              onTheaterModeChange={setIsTheaterMode}
               onTimeUpdate={(time) => {
                 const sec = Math.floor(time);
                 if (sec > 0 && sec % 30 === 0 && sec !== lastTrackedRef.current) {

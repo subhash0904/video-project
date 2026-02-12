@@ -1,0 +1,1 @@
+UPDATE users SET "passwordHash" = '$2b$12$rWGesqINsp/fnu.VK9A0gOAZXedOgg7hT/lXpBQvAmSwYcjM1MGIK' WHERE email IN ('testuser@example.com','alice@example.com','bob@example.com','carol@example.com','david@example.com','eve@example.com');

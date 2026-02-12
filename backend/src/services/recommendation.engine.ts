@@ -58,10 +58,32 @@ interface UserSignals {
 
 const toNum = (v: bigint | number): number => typeof v === 'bigint' ? Number(v) : v;
 
+/** Flatten Prisma video result into the shape the frontend expects. */
+function normalizeVideo(v: any) {
+  return {
+    id: v.id,
+    title: v.title,
+    description: v.description ?? '',
+    thumbnailUrl: v.thumbnailUrl,
+    duration: v.duration,
+    views: toNum(v.stats?.viewCount ?? v.viewsCache ?? 0),
+    likes: toNum(v.stats?.likeCount ?? v.likesCache ?? 0),
+    dislikes: toNum(v.stats?.dislikeCount ?? 0),
+    commentCount: toNum(v.stats?.commentCount ?? 0),
+    hlsUrl: v.hlsUrl ?? null,
+    type: v.type,
+    category: v.category,
+    status: v.status,
+    publishedAt: v.publishedAt instanceof Date ? v.publishedAt.toISOString() : (v.publishedAt ?? new Date().toISOString()),
+    channel: v.channel,
+  };
+}
+
 const VIDEO_SELECT = {
   id: true,
   title: true,
   thumbnailUrl: true,
+  hlsUrl: true,
   duration: true,
   type: true,
   category: true,
@@ -474,3 +496,4 @@ export class RecommendationEngine {
 }
 
 export const recommendationEngine = new RecommendationEngine();
+export { normalizeVideo };

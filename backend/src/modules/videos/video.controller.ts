@@ -5,6 +5,7 @@ import { successResponse, errorResponse, paginatedResponse, getPaginationParams,
 import { asyncHandler } from '../../middleware/errorHandler.js';
 import { AuthRequest } from '../../middleware/auth.js';
 import { prisma } from '../../config/db.js';
+import { normalizeVideo } from '../../services/recommendation.engine.js';
 import type { VideoCategory } from '@prisma/client';
 import { uploadVideoWithThumbnail } from '../../middleware/upload.js';
 import { extractVideoMetadata, determineVideoType, generateThumbnail, validateVideoFile } from '../../utils/videoMetadata.js';
@@ -119,7 +120,7 @@ export const getVideoFeed = asyncHandler(async (req: AuthRequest, res: Response)
 
   const meta = createPaginationMeta(total, page, limit);
 
-  return paginatedResponse(res, videos, meta, 'Video feed retrieved');
+  return paginatedResponse(res, videos.map(normalizeVideo), meta, 'Video feed retrieved');
 });
 
 export const getVideoById = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -127,7 +128,7 @@ export const getVideoById = asyncHandler(async (req: AuthRequest, res: Response)
 
   const video = await videoService.getVideoById(id, req.user?.userId);
 
-  return successResponse(res, video, 'Video retrieved');
+  return successResponse(res, normalizeVideo(video), 'Video retrieved');
 });
 export const uploadVideo = asyncHandler(async (req: AuthRequest, res: Response) => {
   // Validation
@@ -432,12 +433,21 @@ export const searchVideos = asyncHandler(async (req: AuthRequest, res: Response)
     ? categoryRaw
     : undefined) as VideoCategory | undefined;
 
+  const typeRaw = req.query.type as string | undefined;
+  const validTypes = ['STANDARD', 'SHORT'];
+  const durationRaw = req.query.duration as string | undefined;
+  const validDurations = ['short', 'medium', 'long'];
+  const uploadDateRaw = req.query.uploadDate as string | undefined;
+  const validUploadDates = ['hour', 'today', 'week', 'month', 'year'];
+  const sortByRaw = req.query.sortBy as string | undefined;
+  const validSortBy = ['relevance', 'date', 'views', 'rating'];
+
   const filters = {
-    type: req.query.type as 'STANDARD' | 'SHORT' | undefined,
+    type: (typeRaw && validTypes.includes(typeRaw) ? typeRaw : undefined) as 'STANDARD' | 'SHORT' | undefined,
     category,
-    duration: req.query.duration as 'short' | 'medium' | 'long' | undefined,
-    uploadDate: req.query.uploadDate as 'hour' | 'today' | 'week' | 'month' | 'year' | undefined,
-    sortBy: req.query.sortBy as 'relevance' | 'date' | 'views' | 'rating' | undefined,
+    duration: (durationRaw && validDurations.includes(durationRaw) ? durationRaw : undefined) as 'short' | 'medium' | 'long' | undefined,
+    uploadDate: (uploadDateRaw && validUploadDates.includes(uploadDateRaw) ? uploadDateRaw : undefined) as 'hour' | 'today' | 'week' | 'month' | 'year' | undefined,
+    sortBy: (sortByRaw && validSortBy.includes(sortByRaw) ? sortByRaw : undefined) as 'relevance' | 'date' | 'views' | 'rating' | undefined,
   };
 
   const { videos, total } = await videoService.searchVideos(
@@ -456,7 +466,7 @@ export const searchVideos = asyncHandler(async (req: AuthRequest, res: Response)
 
   const meta = createPaginationMeta(total, page, limit);
 
-  return paginatedResponse(res, videos, meta, 'Search results');
+  return paginatedResponse(res, videos.map(normalizeVideo), meta, 'Search results');
 });
 
 export const getRecommendedVideos = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -469,5 +479,5 @@ export const getRecommendedVideos = asyncHandler(async (req: AuthRequest, res: R
     limit
   );
 
-  return successResponse(res, videos, 'Recommended videos retrieved');
+  return successResponse(res, videos.map(normalizeVideo), 'Recommended videos retrieved');
 });

@@ -141,7 +141,14 @@ export const videosApi = {
     sortBy?: string;
     category?: string;
   }) => {
-    const query = new URLSearchParams(params as unknown as Record<string, string>).toString();
+    // Strip undefined/empty values so they don't serialize as "undefined"
+    const cleaned: Record<string, string> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        cleaned[key] = String(value);
+      }
+    }
+    const query = new URLSearchParams(cleaned).toString();
     return apiClient.get(`/videos/search?${query}`);
   },
 

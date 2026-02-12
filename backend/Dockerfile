@@ -12,17 +12,25 @@ COPY tsconfig.json ./
 COPY src ./src/
 RUN pnpm run build
 RUN pnpm prisma generate
-# Prune to production deps only
-RUN pnpm prune --prod
+
 
 # Final production image
 FROM node:20-alpine AS production
+RUN apk add --no-cache ffmpeg
 WORKDIR /app
 
+# Copy all dependencies (not just production) so seed scripts work
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma/
 COPY package.json ./
+
+# Copy seed scripts for database seeding
+COPY --from=build /app/prisma/seed.ts ./prisma/seed.ts
+COPY --from=build /app/prisma/seed-production.ts ./prisma/seed-production.ts
+
+# Ensure tsx is available (if not in production deps)
+RUN pnpm add -g tsx || true
 
 # Create upload directories
 RUN mkdir -p uploads/raw uploads/processed uploads/thumbnails

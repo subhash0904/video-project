@@ -10,6 +10,8 @@ import {
 } from '../../utils/response.js';
 import { asyncHandler } from '../../middleware/errorHandler.js';
 import { AuthRequest } from '../../middleware/auth.js';
+import { normalizeVideo } from '../../services/recommendation.engine.js';
+import { prisma } from '../../config/db.js';
 
 // ============================================
 // Validation Rules
@@ -29,13 +31,37 @@ export const updateChannelValidation = [
 export const getChannel = asyncHandler(async (req, res: Response) => {
   const identifier = req.params.identifier as string; //  Can be ID or @handle
 
-  const channel = await channelService.getChannel(identifier);
+  const channel: any = await channelService.getChannel(identifier);
 
-  return successResponse(res, channel, 'Channel retrieved');
+  // Normalize date fields
+  const normalized = {
+    ...channel,
+    createdAt: channel.createdAt instanceof Date ? channel.createdAt.toISOString() : channel.createdAt,
+    updatedAt: channel.updatedAt instanceof Date ? channel.updatedAt.toISOString() : channel.updatedAt,
+    user: channel.user ? {
+      ...channel.user,
+      createdAt: channel.user.createdAt instanceof Date ? channel.user.createdAt.toISOString() : channel.user.createdAt,
+    } : channel.user,
+  };
+
+  return successResponse(res, normalized, 'Channel retrieved');
 });
 
 export const getChannelVideos = asyncHandler(async (req, res: Response) => {
-  const id = req.params.id as string;
+  let id = req.params.id as string;
+
+  // Resolve handle to channel ID
+  if (id.startsWith('@')) {
+    const channel = await prisma.channel.findUnique({
+      where: { handle: id },
+      select: { id: true },
+    });
+    if (!channel) {
+      return errorResponse(res, 'Channel not found', 404);
+    }
+    id = channel.id;
+  }
+
   const { page, limit } = getPaginationParams(
     req.query.page as string,
     req.query.limit as string
@@ -51,7 +77,7 @@ export const getChannelVideos = asyncHandler(async (req, res: Response) => {
 
   const meta = createPaginationMeta(total, page, limit);
 
-  return paginatedResponse(res, videos, meta, 'Channel videos retrieved');
+  return paginatedResponse(res, videos.map(normalizeVideo), meta, 'Channel videos retrieved');
 });
 
 export const updateChannel = asyncHandler(async (req: AuthRequest, res: Response) => {

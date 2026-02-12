@@ -40,8 +40,7 @@ export function VideoEngagement({
   const [savedToFavorites, setSavedToFavorites] = useState(false);
   const [showNewPlaylist, setShowNewPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const nativeShare = (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share;
-  const canNativeShare = typeof nativeShare === 'function';
+  const canNativeShare = false; // Always use dropdown menu on desktop for reliability
 
   const checkSubscriptionStatus = useCallback(async () => {
     try {
@@ -150,17 +149,14 @@ export function VideoEngagement({
     }
   };
 
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const handleShare = () => {
     const url = `${window.location.origin}/watch?v=${videoId}`;
-    if (canNativeShare) {
-      nativeShare({
-        title: 'Check out this video!',
-        url: url,
-      });
-    } else {
-      navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard!');
-    }
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    });
     setShowShareMenu(false);
   };
 
@@ -283,7 +279,7 @@ export function VideoEngagement({
           
           {showShareMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-10 border border-neutral-200">
-              <button onClick={handleShare} className="w-full px-4 py-2 text-left hover:bg-neutral-100">Copy link</button>
+              <button onClick={handleShare} className="w-full px-4 py-2 text-left hover:bg-neutral-100">{copiedLink ? '✓ Copied!' : 'Copy link'}</button>
               <button onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}`, '_blank')} className="w-full px-4 py-2 text-left hover:bg-neutral-100">Share on Twitter</button>
               <button onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')} className="w-full px-4 py-2 text-left hover:bg-neutral-100">Share on Facebook</button>
             </div>

@@ -3,7 +3,7 @@ import { asyncHandler } from '../../middleware/errorHandler.js';
 import { AuthRequest, authenticate, optionalAuth } from '../../middleware/auth.js';
 import { successResponse, errorResponse, paginatedResponse, getPaginationParams, createPaginationMeta } from '../../utils/response.js';
 import * as recService from './rec.service.js';
-import { recommendationEngine } from '../../services/recommendation.engine.js';
+import { recommendationEngine, normalizeVideo } from '../../services/recommendation.engine.js';
 import { Response } from 'express';
 
 const router = Router();
@@ -179,7 +179,7 @@ router.get(
 
     // Trending always available
     const trending = await recommendationEngine.getTrending(12);
-    sections.push({ id: 'trending', title: 'Trending', videos: trending });
+    sections.push({ id: 'trending', title: 'Trending', videos: trending.map(normalizeVideo) });
 
     // Authenticated user gets personalized sections
     if (userId) {
@@ -190,12 +190,12 @@ router.get(
       ]);
 
       if (continueWatching.length > 0) {
-        sections.unshift({ id: 'continue', title: 'Continue Watching', videos: continueWatching });
+        sections.unshift({ id: 'continue', title: 'Continue Watching', videos: continueWatching.map(normalizeVideo) });
       }
       if (fromSubs.length > 0) {
-        sections.splice(1, 0, { id: 'subscriptions', title: 'From Your Subscriptions', videos: fromSubs });
+        sections.splice(1, 0, { id: 'subscriptions', title: 'From Your Subscriptions', videos: fromSubs.map(normalizeVideo) });
       }
-      sections.push({ id: 'for-you', title: 'Recommended For You', videos: forYou.videos });
+      sections.push({ id: 'for-you', title: 'Recommended For You', videos: forYou.videos.map(normalizeVideo) });
     }
 
     return successResponse(res, { sections }, 'Home feed retrieved');

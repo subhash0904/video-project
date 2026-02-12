@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import VideoCard from "../components/video/VideoCard";
 import SkeletonCard from "../components/video/SkeletonCard";
 import { videosApi, recommendationsApi } from "../lib/api";
@@ -20,9 +21,20 @@ export default function Home() {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [category, setCategory] = useState<'ALL' | string>('ALL');
-  const [mode, setMode] = useState<'sections' | 'grid'>('sections');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlCategory = searchParams.get('category');
+  const [category, setCategory] = useState<'ALL' | string>(urlCategory || 'ALL');
+  const [mode, setMode] = useState<'sections' | 'grid'>(urlCategory ? 'grid' : 'sections');
   const { isAuthenticated } = useAuth();
+
+  // Sync category state with URL changes (e.g., sidebar navigation)
+  useEffect(() => {
+    const newCat = searchParams.get('category') || 'ALL';
+    if (newCat !== category) {
+      setCategory(newCat);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,7 +147,14 @@ export default function Home() {
         {VIDEO_CATEGORY_FILTERS.map((item) => (
           <button
             key={item.id}
-            onClick={() => setCategory(item.id)}
+            onClick={() => {
+              setCategory(item.id);
+              if (item.id === 'ALL') {
+                setSearchParams({});
+              } else {
+                setSearchParams({ category: item.id });
+              }
+            }}
             className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
               category === item.id
                 ? 'bg-black text-white'

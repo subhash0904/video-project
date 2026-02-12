@@ -112,6 +112,30 @@ export default function Search() {
 
   return (
     <div className="pt-2">
+      {/* Voice Search Listening Overlay */}
+      {isListening && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={stopVoiceSearch}>
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="relative inline-flex items-center justify-center mb-6">
+              <div className="absolute w-20 h-20 bg-red-100 rounded-full animate-ping opacity-50" />
+              <div className="relative w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-lg font-semibold mb-2">Listening...</h2>
+            <p className="text-neutral-500 text-sm mb-4">Say what you want to search for</p>
+            <button
+              onClick={stopVoiceSearch}
+              className="px-6 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-full text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-4">
         <h1 className="text-xl font-bold">
           {query ? (

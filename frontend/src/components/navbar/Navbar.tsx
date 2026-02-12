@@ -122,6 +122,30 @@ export default function Navbar() {
   }
 
   return (
+    <>
+    {/* Voice Search Listening Overlay */}
+    {isListening && (
+      <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center" onClick={handleVoiceSearch}>
+        <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <div className="absolute w-20 h-20 bg-red-100 rounded-full animate-ping opacity-50" />
+            <div className="relative w-16 h-16 bg-red-600 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-lg font-semibold mb-2">Listening...</h2>
+          <p className="text-neutral-500 text-sm mb-4">Say what you want to search for</p>
+          <button
+            onClick={handleVoiceSearch}
+            className="px-6 py-2 bg-neutral-100 hover:bg-neutral-200 rounded-full text-sm font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
     <header className="fixed top-0 inset-x-0 h-16 bg-white border-b border-neutral-200 z-50 flex items-center px-4">
       <div className="flex items-center gap-3">
         <button 
@@ -310,5 +334,6 @@ export default function Navbar() {
         )}
       </div>
     </header>
+    </>
   );
 }
