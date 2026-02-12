@@ -25,7 +25,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
-          ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
+          if [ -z "${{ secrets.GCP_VM_IP }}" ]; then
+            echo "GCP_VM_IP secret is not set!" >&2
+            exit 1
+          fi
+          ssh-keyscan -H "${{ secrets.GCP_VM_IP }}" >> ~/.ssh/known_hosts
       
       - name: Deploy to GCP (with rollback support)
         env:
