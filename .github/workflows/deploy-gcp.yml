@@ -23,7 +23,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/gcp_key
+          
           chmod 600 ~/.ssh/gcp_key
           if [ -z "${{ secrets.GCP_VM_IP }}" ]; then
             echo "GCP_VM_IP secret is not set!" >&2
