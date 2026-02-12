@@ -1,4 +1,4 @@
-# Youtube
+# streaming platform like Youtube
 
 ## Overview
 Designed and deployed a distributed video streaming platform on Google Cloud Platform, enabling adaptive, low-latency playback through asynchronous FFmpeg-powered HLS transcoding pipelines and optimized media delivery via Nginx and load balancing.
